@@ -1,0 +1,24 @@
+---
+- name: Getting patroni facts
+  # noqa: var-naming[no-role-prefix]
+  ansible.builtin.command: >-
+    patronictl
+    --config-file /etc/patroni/config.yml
+    list
+    --format json
+  changed_when: false
+  register: patroni_facts
+  until: patroni_facts.stdout | from_json |
+    selectattr("TL", "defined") |
+    selectattr("Member", "eq", inventory_hostname) |
+    length > 0
+  retries: 6
+  delay: 10
+  tags: [patroni_facts]
+
+- name: Setting patroni facts
+  # noqa: var-naming[no-role-prefix]
+  ansible.builtin.set_fact:
+    patroni_facts: '{{ patroni_facts.stdout | from_json }}'
+  tags: [patroni_facts]
+...

@@ -1,0 +1,34 @@
+---
+- name: Update cluster facts
+  ansible.builtin.import_role:
+    name: patroni_facts
+  tags: [patroni_user]
+
+- name: Create new users
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    name: '{{ item.name }}'
+    comment: '{{ item.comment | default(patroni_user_comment) }}'
+    configuration: '{{ item.configuration |
+      default(patroni_user_configuration) }}'
+    conn_limit: '{{ item.conn_limit | default(patroni_user_conn_limit) }}'
+    encrypted: '{{ item.encrypted | default(patroni_user_encrypted) }}'
+    expires: '{{ item.expires | default(patroni_user_expires) }}'
+    no_password_changes: '{{ item.no_password_changes |
+      default(patroni_user_no_password_changes) }}'
+    password: '{{ item.password | default(patroni_user_password) }}'
+    reset_unspecified_configuration: '{{ item.reset_unspecified_configuration
+      | default(patroni_user_reset_unspecified_configuration) }}'
+    role_attr_flags: '{{ item.role_attr_flags |
+      default(patroni_user_role_attr_flags) }}'
+    session_role: '{{ item.session_role |
+      default(patroni_user_session_role) }}'
+    state: present
+  loop: '{{ patroni_user_list }}'
+  loop_control:
+    label: '{{ item.name }}'
+  when: patroni_facts | selectattr("Role", "eq", "Leader") |
+    selectattr("Member", "eq", inventory_hostname) | length > 0
+  tags: [patroni_user]
+...

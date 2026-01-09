@@ -1,0 +1,28 @@
+---
+- name: Update cluster facts
+  ansible.builtin.import_role:
+    name: patroni_facts
+  tags: [patroni_privs]
+
+- name: Update cluster privileges
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_privs:
+    login_db: '{{ item.login_db }}'
+    roles: '{{ item.roles }}'
+    grant_option: '{{ item.grant_option |
+      default(patroni_privs_grant_option) }}'
+    objs: '{{ item.objs | default(patroni_privs_objs) }}'
+    privs: '{{ item.privs | default(patroni_privs_privs) }}'
+    schema: '{{ item.schema | default(patroni_privs_schema) }}'
+    session_role: '{{ item.session_role |
+      default(patroni_privs_session_role) }}'
+    type: '{{ item.type | default(patroni_privs_type) }}'
+    state: present
+  loop: '{{ patroni_privs_list }}'
+  loop_control:
+    label: '{{ item.roles }} - {{ item.login_db }}'
+  when: patroni_facts | selectattr("Role", "eq", "Leader") |
+    selectattr("Member", "eq", inventory_hostname) | length > 0
+  tags: [patroni_privs]
+...

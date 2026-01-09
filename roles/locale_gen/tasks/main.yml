@@ -1,0 +1,6 @@
+---
+- name: Generate additional locales
+  community.general.locale_gen:
+    name: '{{ locale_gen_locales }}'
+    state: present
+...

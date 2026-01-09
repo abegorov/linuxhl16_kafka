@@ -1,0 +1,61 @@
+---
+- name: Common provision
+  tags: common
+  hosts: all
+  become: true
+  gather_facts: false
+  roles:
+    - tls_ca
+    - tls_certs
+    - wait_connection
+    - apt_sources
+    - bash_completion
+    - chrony
+    - hosts
+    - locale_gen
+    - system_groups
+    - system_users
+
+- name: Elastic search provision
+  hosts: elasticsearch
+  become: true
+  gather_facts: false
+  roles:
+    - kafka
+    - elasticsearch
+    - kibana
+    - logstash
+
+- name: Backend provision
+  hosts: backend
+  become: true
+  gather_facts: false
+  roles:
+    - angie
+    - etcd
+    - patroni
+    - haproxy
+    - pgbouncer
+    - redis
+    - redis_sentinel
+    - patroni_user
+    - patroni_db
+    - patroni_privs
+    - netbox
+    - role: keepalived
+      when: not yandex_cloud | default(False)
+
+- name: Filebeat provision
+  hosts: all
+  become: true
+  gather_facts: false
+  roles:
+    - filebeat
+
+- name: Create kibana data views
+  hosts: kfk-es-01
+  become: false
+  gather_facts: false
+  roles:
+    - kibana_dataview
+...

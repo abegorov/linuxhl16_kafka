@@ -1,0 +1,55 @@
+---
+- name: Install elasticsearch
+  ansible.builtin.import_tasks: install.yml
+  tags: [elasticsearch, elasticsearch_install]
+
+- name: Import certs tasks
+  ansible.builtin.import_role:
+    name: tls_copy
+    public: false
+  vars:
+    tls_copy_certs:
+      - '{{ elasticsearch_cert }}'
+      - '{{ elasticsearch_transport_cert }}'
+    tls_copy_dir_owner: root
+    tls_copy_dir_group: elasticsearch
+    tls_copy_dir_mode: '0750'
+    tls_copy_cert_owner: root
+    tls_copy_cert_group: elasticsearch
+    tls_copy_cert_mode: '0660'
+    tls_copy_key_owner: root
+    tls_copy_key_group: elasticsearch
+    tls_copy_key_mode: '0660'
+    tls_copy_notify: Restart elasticsearch service
+  tags: [elasticsearch, elasticsearch_certs]
+
+- name: Configure elasticsearch
+  ansible.builtin.import_tasks: config.yml
+  tags: [elasticsearch, elasticsearch_config]
+
+- name: Setting elasticsearch built-in users' passwords
+  ansible.builtin.include_tasks: passwords.yml
+  loop:
+    - user: elastic
+      password: '{{ elasticsearch_elastic_password }}'
+    - user: kibana_system
+      password: '{{ elasticsearch_kibana_password }}'
+    - user: logstash_system
+      password: '{{ elasticsearch_logstash_password }}'
+    - user: beats_system
+      password: '{{ elasticsearch_beats_password }}'
+    - user: apm_system
+      password: '{{ elasticsearch_apm_password }}'
+    - user: remote_monitoring_user
+      password: '{{ elasticsearch_monitoring_password }}'
+  loop_control:
+    label: '{{ item.user }}'
+  when:
+    - elasticsearch_update_passwords
+    - item.password | length > 0
+  tags: [elasticsearch, elasticsearch_config]
+
+- name: Force all notified handlers to run
+  ansible.builtin.meta: flush_handlers
+  tags: [elasticsearch, elasticsearch_config]
+...

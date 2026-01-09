@@ -1,0 +1,15 @@
+{%
+  set config = (
+    elasticsearch_config | ansible.builtin.dict2items |
+    rejectattr('key', 'eq', 'cluster.initial_master_nodes') |
+    ansible.builtin.items2dict
+  )
+  if elasticsearch_filter_config | default(True)
+  else elasticsearch_config
+%}
+{% if config %}
+{{
+  config | to_nice_yaml(indent=2, sort_keys=False, explicit_start=True,
+  explicit_end=True)
+}}
+{% endif %}

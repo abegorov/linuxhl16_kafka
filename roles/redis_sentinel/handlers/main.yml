@@ -1,0 +1,8 @@
+---
+- name: Restart redis-sentinel service
+  ansible.builtin.systemd_service:
+    name: redis-sentinel.service
+    state: restarted
+  ignore_errors: '{{ ansible_check_mode }}'
+  throttle: 1
+...

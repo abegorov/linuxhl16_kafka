@@ -1,0 +1,5 @@
+---
+kafka_user: kafka
+kafka_group: kafka
+kafka_data: /var/lib/kafka
+...

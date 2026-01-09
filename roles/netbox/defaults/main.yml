@@ -1,0 +1,158 @@
+---
+netbox_version: '4.4.8'
+netbox_download_url: >-
+  https://github.com/netbox-community/netbox/archive/refs/tags/v{{
+  netbox_version }}.tar.gz
+
+netbox_unarchive_dir: /opt/netbox-{{ netbox_version }}
+netbox_dir: /opt/netbox
+netbox_etc_dir: /etc/netbox
+netbox_var_dir: /var/lib/netbox
+netbox_media_dir: '{{ netbox_var_dir }}/media'
+netbox_reports_dir: '{{ netbox_var_dir }}/reports'
+netbox_scripts_dir: '{{ netbox_var_dir }}/scripts'
+
+netbox_user: netbox
+netbox_group: netbox
+netbox_socket_user: www-data
+netbox_socket_group: www-data
+
+netbox_pgsql_cert:
+  ca_path: '{{ netbox_etc_dir }}/pgsqlca.crt'
+  cert_path: '{{ netbox_etc_dir }}/pgsql.crt'
+  key_path: '{{ netbox_etc_dir }}/pgsql.key'
+  ca_content: '{{ lookup("ansible.builtin.file", pgsql_ca_cert_path) }}'
+  cert_content: '{{ lookup("ansible.builtin.file", pgsql_cert_path) }}'
+  key_content: '{{ lookup("ansible.builtin.file", pgsql_key_path) }}'
+
+netbox_redis_cert:
+  ca_path: '{{ netbox_etc_dir }}/redisca.crt'
+  cert_path: '{{ netbox_etc_dir }}/redis.crt'
+  key_path: '{{ netbox_etc_dir }}/redis.key'
+  ca_content: '{{ lookup("ansible.builtin.file", redis_ca_cert_path) }}'
+  cert_content: '{{ lookup("ansible.builtin.file", redis_cert_path) }}'
+  key_content: '{{ lookup("ansible.builtin.file", redis_key_path) }}'
+
+netbox_secret_key: '{{ lookup("ansible.builtin.password",
+  netbox_secret_key_path, length=50) }}'
+netbox_secret_key_path: secrets/netbox_secret_key.txt
+
+netbox_db: netbox
+netbox_db_user: netbox
+netbox_db_password: '{{ lookup("ansible.builtin.password",
+  netbox_db_password_path, length=26) }}'
+netbox_db_password_path: secrets/netbox_db_password.txt
+netbox_db_host: localhost
+netbox_db_port: 5432
+
+netbox_redis_host: localhost
+netbox_redis_port: 6379
+netbox_redis_username: ''
+netbox_redis_password: ''
+
+netbox_superuser: admin
+netbox_superuser_email: root@localhost
+netbox_superuser_password: '{{ lookup("ansible.builtin.password",
+  netbox_superuser_password_path, length=26,
+  chars=["ascii_letters", "digits", ".,-_"]) }}'
+netbox_superuser_password_path: secrets/netbox_superuser_password.txt
+
+netbox_socket: /run/netbox.sock
+
+netbox_conf: '{{ netbox_conf_default |
+  ansible.builtin.combine(netbox_conf_override, recursive=True) }}'
+netbox_conf_default:
+  ALLOWED_HOSTS: []
+  DATABASES:
+    default:
+      ENGINE: 'django.db.backends.postgresql'
+      NAME: '{{ netbox_db }}'
+      USER: '{{ netbox_db_user }}'
+      PASSWORD: '{{ netbox_db_password }}'
+      HOST: '{{ netbox_db_host }}'
+      PORT: '{{ netbox_db_port }}'
+      CONN_MAX_AGE: 300
+      OPTIONS:
+        sslmode: verify-full
+        sslrootcert: '{{ netbox_pgsql_cert.ca_path }}'
+        sslcert: '{{ netbox_pgsql_cert.cert_path }}'
+        sslkey: '{{ netbox_pgsql_cert.key_path }}'
+  REDIS:
+    tasks:
+      HOST: '{{ netbox_redis_host }}'
+      PORT: '{{ netbox_redis_port }}'
+      # SENTINELS: ["('localhost', 26379)"]
+      # SENTINEL_SERVICE: mymaster
+      USERNAME: '{{ netbox_redis_username }}'
+      PASSWORD: '{{ netbox_redis_password }}'
+      DATABASE: 0
+      SSL: true
+      INSECURE_SKIP_TLS_VERIFY: false
+      CA_CERT_PATH: '{{ netbox_redis_cert.ca_path }}'
+    caching:
+      HOST: '{{ netbox_redis_host }}'
+      PORT: '{{ netbox_redis_port }}'
+      # SENTINELS: ["('localhost', 26379)"]
+      # SENTINEL_SERVICE: mymaster
+      USERNAME: '{{ netbox_redis_username }}'
+      PASSWORD: '{{ netbox_redis_password }}'
+      DATABASE: 1
+      SSL: true
+      INSECURE_SKIP_TLS_VERIFY: false
+      CA_CERT_PATH: '{{ netbox_redis_cert.ca_path }}'
+  SECRET_KEY: '{{ netbox_secret_key }}'
+  ADMINS: []
+  ALLOW_TOKEN_RETRIEVAL: false
+  AUTH_PASSWORD_VALIDATORS: []
+  BASE_PATH: ''
+  CORS_ORIGIN_ALLOW_ALL: false
+  CORS_ORIGIN_WHITELIST: []
+  CORS_ORIGIN_REGEX_WHITELIST: []
+  CSRF_COOKIE_NAME: csrftoken
+  DEBUG: false
+  DEFAULT_LANGUAGE: ru-ru
+  EMAIL:
+    SERVER: localhost
+    PORT: 25
+    USERNAME: ''
+    PASSWORD: ''
+    USE_SSL: false
+    USE_TLS: false
+    TIMEOUT: 10
+    FROM_EMAIL: ''
+  EXEMPT_VIEW_PERMISSIONS: []
+  INTERNAL_IPS: ('127.0.0.1', '::1')
+  LOGGING: {}
+  LOGIN_PERSISTENCE: false
+  LOGIN_REQUIRED: true
+  LOGIN_TIMEOUT:
+  LOGIN_FORM_HIDDEN: false
+  LOGOUT_REDIRECT_URL: home
+  METRICS_ENABLED: false
+  PLUGINS: []
+  REMOTE_AUTH_ENABLED: false
+  REMOTE_AUTH_BACKEND: netbox.authentication.RemoteUserBackend
+  REMOTE_AUTH_HEADER: HTTP_REMOTE_USER
+  REMOTE_AUTH_USER_FIRST_NAME: HTTP_REMOTE_USER_FIRST_NAME
+  REMOTE_AUTH_USER_LAST_NAME: HTTP_REMOTE_USER_LAST_NAME
+  REMOTE_AUTH_USER_EMAIL: HTTP_REMOTE_USER_EMAIL
+  REMOTE_AUTH_AUTO_CREATE_USER: true
+  REMOTE_AUTH_DEFAULT_GROUPS: []
+  REMOTE_AUTH_DEFAULT_PERMISSIONS: {}
+  RELEASE_CHECK_URL:
+  RQ_DEFAULT_TIMEOUT: 300
+  SESSION_COOKIE_NAME: sessionid
+  SESSION_FILE_PATH:
+  TIME_ZONE: UTC
+netbox_conf_override: {}
+
+netbox_gunicorn_conf: '{{ netbox_gunicorn_conf_default |
+  ansible.builtin.combine(netbox_gunicorn_conf_override, recursive=True) }}'
+netbox_gunicorn_conf_default:
+  workers: 5
+  threads: 3
+  timeout: 120
+  max_requests: 5000
+  max_requests_jitter: 500
+netbox_gunicorn_conf_override: {}
+...

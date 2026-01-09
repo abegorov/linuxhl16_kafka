@@ -1,0 +1,27 @@
+---
+- name: Import install tasks
+  ansible.builtin.import_tasks: install.yml
+  tags: [etcd, etcd_install]
+
+- name: Import certs tasks
+  ansible.builtin.import_role:
+    name: tls_copy
+    public: false
+  vars:
+    tls_copy_certs: ['{{ etcd_cert }}', '{{ etcd_peer_cert }}']
+    tls_copy_key_owner: '{{ etcd_user }}'
+    tls_copy_notify: Restart service etcd
+  tags: [etcd, etcd_certs]
+
+- name: Import config tasks
+  ansible.builtin.import_tasks: config.yml
+  tags: [etcd, etcd_config]
+
+- name: Import etcdctl tasks
+  ansible.builtin.import_tasks: etcdctl.yml
+  tags: [etcd, etcd_etcdctl]
+
+- name: Force all notified handlers to run
+  ansible.builtin.meta: flush_handlers
+  tags: [etcd, etcd_config, etcd_install, etcd_certs]
+...

@@ -1,0 +1,77 @@
+---
+- name: Update netbox socket
+  ansible.builtin.template:
+    src: netbox.socket
+    dest: /etc/systemd/system/netbox.socket
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart netbox socket
+
+- name: Update netbox service
+  ansible.builtin.template:
+    src: netbox.service
+    dest: /etc/systemd/system/netbox.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart netbox service
+
+- name: Update netbox-rq service
+  ansible.builtin.template:
+    src: netbox-rq.service
+    dest: /etc/systemd/system/netbox-rq.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart netbox-rq service
+
+- name: Update netbox-housekeeping service
+  ansible.builtin.template:
+    src: netbox-housekeeping.service
+    dest: /etc/systemd/system/netbox-housekeeping.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Update netbox-housekeeping timer
+  ansible.builtin.template:
+    src: netbox-housekeeping.timer
+    dest: /etc/systemd/system/netbox-housekeeping.timer
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart netbox-housekeeping timer
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Enable and start netbox socket
+  ansible.builtin.systemd_service:
+    name: netbox.socket
+    enabled: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+
+- name: Enable and start netbox service
+  ansible.builtin.systemd_service:
+    name: netbox.service
+    enabled: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+
+- name: Enable and start netbox-rq service
+  ansible.builtin.systemd_service:
+    name: netbox-rq.service
+    enabled: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+
+- name: Enable and start netbox-housekeeping timer
+  ansible.builtin.systemd_service:
+    name: netbox-housekeeping.timer
+    enabled: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+...

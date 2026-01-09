@@ -1,0 +1,31 @@
+---
+- name: Install filebeat
+  ansible.builtin.import_tasks: install.yml
+  tags: [filebeat, filebeat_install]
+
+- name: Import certs tasks
+  ansible.builtin.import_role:
+    name: tls_copy
+    public: false
+  vars:
+    tls_copy_certs: '{{ [filebeat_cert] + filebeat_add_certs }}'
+    tls_copy_dir_owner: root
+    tls_copy_dir_group: root
+    tls_copy_dir_mode: '0750'
+    tls_copy_cert_owner: root
+    tls_copy_cert_group: root
+    tls_copy_cert_mode: '0660'
+    tls_copy_key_owner: root
+    tls_copy_key_group: root
+    tls_copy_key_mode: '0660'
+    tls_copy_notify: Restart filebeat service
+  tags: [filebeat, filebeat_certs]
+
+- name: Configure filebeat
+  ansible.builtin.import_tasks: config.yml
+  tags: [filebeat, filebeat_config]
+
+- name: Force all notified handlers to run
+  ansible.builtin.meta: flush_handlers
+  tags: [filebeat, filebeat_config]
+...

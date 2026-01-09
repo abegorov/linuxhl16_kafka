@@ -1,0 +1,23 @@
+---
+netbox_user: netbox
+netbox_group: netbox
+netbox_socket_user: angie
+netbox_socket_group: angie
+netbox_uid: 60000
+netbox_gid: 60000
+netbox_var_dir: /var/lib/netbox
+
+netbox_db_port: 6000
+netbox_redis_port: 6380
+netbox_redis_password: '{{ redis_password }}'
+
+netbox_conf_override:
+  ALLOWED_HOSTS: ['*']
+  REDIS:
+    tasks:
+      PORT: 6380
+      PASSWORD: '{{ redis_password }}'
+    caching:
+      PORT: 6380
+      PASSWORD: '{{ redis_password }}'
+...

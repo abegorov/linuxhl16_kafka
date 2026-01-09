@@ -1,0 +1,51 @@
+---
+- name: Update logstash config
+  ansible.builtin.template:
+    src: logstash.yml.j2
+    dest: /etc/logstash/logstash.yml
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart logstash service
+
+- name: Update logstash pipelines
+  ansible.builtin.template:
+    src: pipelines.yml.j2
+    dest: /etc/logstash/pipelines.yml
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart logstash service
+
+- name: Update jvm options options
+  ansible.builtin.copy:
+    content: '{{ logstash_jvm_options }}'
+    dest: /etc/logstash/jvm.options
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart logstash service
+
+- name: Update logstash pipelines config
+  ansible.builtin.copy:
+    content: '{{ item.value }}'
+    dest: /etc/logstash/conf.d/{{ item.key }}.conf
+    owner: '{{ logstash_confd_perms[item.key].owner |
+      default(logstash_confd_default_owner) }}'
+    group: '{{ logstash_confd_perms[item.key].group |
+      default(logstash_confd_default_group) }}'
+    mode: '{{ logstash_confd_perms[item.key].mode |
+      default(logstash_confd_default_mode) }}'
+  no_log: '{{ not debug }}'
+  loop: '{{ logstash_confd | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+  notify: Restart logstash service
+
+- name: Enable and start logstash service
+  ansible.builtin.systemd_service:
+    name: logstash.service
+    enabled: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+...

@@ -1,0 +1,20 @@
+---
+- name: Update etcdctl variables for root
+  vars:
+    etcdctl_vars:
+      ETCDCTL_CACERT: '{{ etcd_cert.ca_path }}'
+      ETCDCTL_CERT: '{{ etcd_cert.cert_path }}'
+      ETCDCTL_KEY: '{{ etcd_cert.key_path }}'
+      ETCDCTL_ENDPOINTS: |-
+        {%- for host in etcd_cluster -%}
+        https://{{ hostvars[host].etcd_ip }}:2379
+        {{- ',' if not loop.last else '' -}}
+        {%- endfor -%}
+  ansible.builtin.lineinfile:
+    path: /root/.bashrc
+    regexp: '^export {{ item.key | ansible.builtin.regex_escape }}='
+    line: export {{ item.key }}={{ item.value | ansible.builtin.quote }}
+  loop: '{{ etcdctl_vars | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+...

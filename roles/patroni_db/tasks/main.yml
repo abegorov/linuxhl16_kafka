@@ -1,0 +1,30 @@
+---
+- name: Update cluster facts
+  ansible.builtin.import_role:
+    name: patroni_facts
+  tags: [patroni_db]
+
+- name: Create new databases
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_db:
+    name: '{{ item.name }}'
+    comment: '{{ item.comment | default(patroni_db_comment) }}'
+    conn_limit: '{{ item.conn_limit | default(patroni_db_conn_limit) }}'
+    encoding: '{{ item.encoding | default(patroni_db_encoding) }}'
+    icu_locale: '{{ item.icu_locale | default(patroni_db_icu_locale) }}'
+    lc_collate: '{{ item.lc_collate | default(patroni_db_lc_collate) }}'
+    lc_ctype: '{{ item.lc_ctype | default(patroni_db_lc_ctype) }}'
+    locale_provider: '{{ item.locale_provider |
+      default(patroni_db_locale_provider) }}'
+    owner: '{{ item.owner | default(patroni_db_owner) }}'
+    tablespace: '{{ item.tablespace | default(patroni_db_tablespace) }}'
+    template: '{{ item.template | default(patroni_db_template) }}'
+    state: present
+  loop: '{{ patroni_db_list }}'
+  loop_control:
+    label: '{{ item.name }}'
+  when: patroni_facts | selectattr("Role", "eq", "Leader") |
+    selectattr("Member", "eq", inventory_hostname) | length > 0
+  tags: [patroni_db]
+...

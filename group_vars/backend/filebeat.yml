@@ -1,0 +1,47 @@
+---
+filebeat_logstash_ca: /etc/filebeat/certs/logstash_ca.crt
+filebeat_add_certs:
+  - ca_path: '{{ filebeat_logstash_ca }}'
+    ca_content: '{{ lookup("ansible.builtin.file", logstash_ca_cert_path) }}'
+
+filebeat_config:
+  filebeat.modules:
+    - module: system
+      syslog.enabled: true
+      syslog.var.use_journald: true
+      auth.enabled: true
+      auth.var.use_journald: true
+    - module: haproxy
+      log.enabled: true
+      log.var.input: file
+      log.var.paths: [/var/log/haproxy.log*]
+    - module: nginx
+      access.enabled: true
+      access.var.paths: [/var/log/angie/access.log*]
+      error.enabled: true
+      error.var.paths: [/var/log/angie/error.log*]
+    - module: postgresql
+      log.enabled: true
+      log.var.paths: [/var/log/postgresql/*]
+    - module: redis
+      log.enabled: true
+      log.var.paths: [/var/log/redis/*]
+  setup.template.settings:
+    index.number_of_shards: 2
+  output.logstash:
+    hosts: '{{ groups["elasticsearch"] |
+      map("ansible.builtin.extract", hostvars, "logstash_filebeat_host") }}'
+    ssl.certificate_authorities: ['{{ filebeat_logstash_ca }}']
+    ssl.certificate: '{{ filebeat_cert.cert_path }}'
+    ssl.key: '{{ filebeat_cert.key_path }}'
+  processors:
+    - add_host_metadata:
+        when.not.contains.tags: forwarded
+    - add_cloud_metadata: ~
+    - add_docker_metadata: ~
+    - add_kubernetes_metadata: ~
+    - decode_json_fields:
+        fields: [message]
+        max_depth: 3
+        target: ""
+...

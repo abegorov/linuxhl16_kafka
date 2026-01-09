@@ -1,0 +1,27 @@
+---
+- name: Update kibana config
+  ansible.builtin.template:
+    src: kibana.yml.j2
+    dest: /etc/kibana/kibana.yml
+    owner: root
+    group: kibana
+    mode: '0660'
+  no_log: '{{ not debug }}'
+  notify: Restart kibana service
+
+- name: Update kibana node options
+  ansible.builtin.copy:
+    content: '{{ kibana_node_options }}'
+    dest: /etc/kibana/node.options
+    owner: root
+    group: kibana
+    mode: '0664'
+  notify: Restart kibana service
+
+- name: Enable and start kibana service
+  ansible.builtin.systemd_service:
+    name: kibana.service
+    enabled: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+...

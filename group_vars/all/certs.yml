@@ -1,0 +1,114 @@
+---
+elasticsearch_certs_dir: secrets/certs/elasticsearch
+elasticsearch_ca_cert_path: '{{ elasticsearch_certs_dir }}/ca.crt'
+elasticsearch_ca_key_path: '{{ elasticsearch_certs_dir }}/ca.key'
+elasticsearch_cert_path: '{{ elasticsearch_certs_dir }}/{{ inventory_hostname }}.crt'
+elasticsearch_key_path: '{{ elasticsearch_certs_dir }}/{{ inventory_hostname }}.key'
+elasticsearch_transport_certs_dir: secrets/certs/elasticsearch-transport
+elasticsearch_transport_ca_cert_path: '{{ elasticsearch_transport_certs_dir }}/ca.crt'
+elasticsearch_transport_ca_key_path: '{{ elasticsearch_transport_certs_dir }}/ca.key'
+elasticsearch_transport_cert_path: '{{ elasticsearch_transport_certs_dir }}/{{ inventory_hostname }}.crt'
+elasticsearch_transport_key_path: '{{ elasticsearch_transport_certs_dir }}/{{ inventory_hostname }}.key'
+kafka_certs_dir: secrets/certs/kafka
+kafka_ca_cert_path: '{{ kafka_certs_dir }}/ca.crt'
+kafka_ca_key_path: '{{ kafka_certs_dir }}/ca.key'
+kafka_cert_path: '{{ kafka_certs_dir }}/{{ inventory_hostname }}.crt'
+kafka_key_path: '{{ kafka_certs_dir }}/{{ inventory_hostname }}.key'
+kibana_certs_dir: secrets/certs/kibana
+kibana_ca_cert_path: '{{ kibana_certs_dir }}/ca.crt'
+kibana_ca_key_path: '{{ kibana_certs_dir }}/ca.key'
+kibana_cert_path: '{{ kibana_certs_dir }}/{{ inventory_hostname }}.crt'
+kibana_key_path: '{{ kibana_certs_dir }}/{{ inventory_hostname }}.key'
+kibana_cert_not_after: '20270101000000Z'
+kibana_cert_not_before: '20260101000000Z'
+logstash_certs_dir: secrets/certs/logstash
+logstash_ca_cert_path: '{{ logstash_certs_dir }}/ca.crt'
+logstash_ca_key_path: '{{ logstash_certs_dir }}/ca.key'
+logstash_cert_path: '{{ logstash_certs_dir }}/{{ inventory_hostname }}.crt'
+logstash_key_path: '{{ logstash_certs_dir }}/{{ inventory_hostname }}.key'
+filebeat_certs_dir: secrets/certs/filebeat
+filebeat_ca_cert_path: '{{ filebeat_certs_dir }}/ca.crt'
+filebeat_ca_key_path: '{{ filebeat_certs_dir }}/ca.key'
+filebeat_cert_path: '{{ filebeat_certs_dir }}/{{ inventory_hostname }}.crt'
+filebeat_key_path: '{{ filebeat_certs_dir }}/{{ inventory_hostname }}.key'
+etcd_certs_dir: secrets/certs/etcd
+etcd_ca_cert_path: '{{ etcd_certs_dir }}/ca.crt'
+etcd_ca_key_path: '{{ etcd_certs_dir }}/ca.key'
+etcd_cert_path: '{{ etcd_certs_dir }}/{{ inventory_hostname }}.crt'
+etcd_key_path: '{{ etcd_certs_dir }}/{{ inventory_hostname }}.key'
+etcd_peer_certs_dir: secrets/certs/etcd-peer
+etcd_peer_ca_cert_path: '{{ etcd_peer_certs_dir }}/ca.crt'
+etcd_peer_ca_key_path: '{{ etcd_peer_certs_dir }}/ca.key'
+etcd_peer_cert_path: '{{ etcd_peer_certs_dir }}/{{ inventory_hostname }}.crt'
+etcd_peer_key_path: '{{ etcd_peer_certs_dir }}/{{ inventory_hostname }}.key'
+patroni_certs_dir: secrets/certs/patroni
+patroni_ca_cert_path: '{{ patroni_certs_dir }}/ca.crt'
+patroni_ca_key_path: '{{ patroni_certs_dir }}/ca.key'
+patroni_cert_path: '{{ patroni_certs_dir }}/{{ inventory_hostname }}.crt'
+patroni_key_path: '{{ patroni_certs_dir }}/{{ inventory_hostname }}.key'
+pgsql_certs_dir: secrets/certs/pgsql
+pgsql_ca_cert_path: '{{ pgsql_certs_dir }}/ca.crt'
+pgsql_ca_key_path: '{{ pgsql_certs_dir }}/ca.key'
+pgsql_cert_path: '{{ pgsql_certs_dir }}/{{ inventory_hostname }}.crt'
+pgsql_key_path: '{{ pgsql_certs_dir }}/{{ inventory_hostname }}.key'
+redis_certs_dir: secrets/certs/redis
+redis_ca_cert_path: '{{ redis_certs_dir }}/ca.crt'
+redis_ca_key_path: '{{ redis_certs_dir }}/ca.key'
+redis_cert_path: '{{ redis_certs_dir }}/{{ inventory_hostname }}.crt'
+redis_key_path: '{{ redis_certs_dir }}/{{ inventory_hostname }}.key'
+web_certs_dir: secrets/certs/web
+web_ca_cert_path: '{{ web_certs_dir }}/ca.crt'
+web_ca_key_path: '{{ web_certs_dir }}/ca.key'
+web_cert_path: '{{ web_certs_dir }}/{{ inventory_hostname }}.crt'
+web_key_path: '{{ web_certs_dir }}/{{ inventory_hostname }}.key'
+web_cert_not_after: '20270101000000Z'
+web_cert_not_before: '20260101000000Z'
+
+tls_ca_not_after: '21260101000000Z'
+tls_ca_not_before: '20260101000000Z'
+tls_ca_certs:
+  - common_name: LOCAL ELASTICSEARCH ROOT CA
+    cert_path: '{{ elasticsearch_ca_cert_path }}'
+    key_path: '{{ elasticsearch_ca_key_path }}'
+  - common_name: LOCAL ELASTICSEARCH TRANSPORT ROOT CA
+    cert_path: '{{ elasticsearch_transport_ca_cert_path }}'
+    key_path: '{{ elasticsearch_transport_ca_key_path }}'
+  - common_name: LOCAL KAFKA ROOT CA
+    cert_path: '{{ kafka_ca_cert_path }}'
+    key_path: '{{ kafka_ca_key_path }}'
+  - common_name: LOCAL KIBANA ROOT CA
+    cert_path: '{{ kibana_ca_cert_path }}'
+    key_path: '{{ kibana_ca_key_path }}'
+  - common_name: LOCAL LOGSTASH ROOT CA
+    cert_path: '{{ logstash_ca_cert_path }}'
+    key_path: '{{ logstash_ca_key_path }}'
+  - common_name: LOCAL FILEBEAT ROOT CA
+    cert_path: '{{ filebeat_ca_cert_path }}'
+    key_path: '{{ filebeat_ca_key_path }}'
+  - common_name: LOCAL ETCD ROOT CA
+    cert_path: '{{ etcd_ca_cert_path }}'
+    key_path: '{{ etcd_ca_key_path }}'
+  - common_name: LOCAL ETCD PEER ROOT CA
+    cert_path: '{{ etcd_peer_ca_cert_path }}'
+    key_path: '{{ etcd_peer_ca_key_path }}'
+  - common_name: LOCAL PATRONI ROOT CA
+    cert_path: '{{ patroni_ca_cert_path }}'
+    key_path: '{{ patroni_ca_key_path }}'
+  - common_name: LOCAL PGSQL ROOT CA
+    cert_path: '{{ pgsql_ca_cert_path }}'
+    key_path: '{{ pgsql_ca_key_path }}'
+  - common_name: LOCAL REDIS ROOT CA
+    cert_path: '{{ redis_ca_cert_path }}'
+    key_path: '{{ redis_ca_key_path }}'
+  - common_name: LOCAL WEB ROOT CA
+    cert_path: '{{ web_ca_cert_path }}'
+    key_path: '{{ web_ca_key_path }}'
+
+tls_certs_not_after: '21260101000000Z'
+tls_certs_not_before: '20260101000000Z'
+tls_certs_subject_alt_name:
+  - 'DNS:{{ inventory_hostname_short }}'
+  - 'DNS:localhost'
+  - 'IP:{{ ip_address }}'
+  - 'IP:127.0.0.1'
+...

@@ -1,0 +1,61 @@
+---
+- name: Create directories for certs and keys
+  vars:
+    ca_paths: '{{ tls_copy_certs | selectattr("ca_path", "defined") |
+      map(attribute="ca_path") }}'
+    cert_paths: '{{ tls_copy_certs | selectattr("cert_path", "defined") |
+      map(attribute="cert_path") }}'
+    key_paths: '{{ tls_copy_certs | selectattr("key_path", "defined") |
+      map(attribute="key_path") }}'
+  ansible.builtin.file:
+    path: '{{ item }}'
+    owner: '{{ tls_copy_dir_owner }}'
+    group: '{{ tls_copy_dir_group }}'
+    mode: '{{ tls_copy_dir_mode }}'
+    state: directory
+  loop: '{{ (ca_paths + cert_paths + key_paths) |
+    map("ansible.builtin.dirname") | ansible.builtin.unique }}'
+
+- name: Update CA certificates
+  ansible.builtin.copy:
+    content: |
+      {{ item.ca_content }}
+    dest: '{{ item.ca_path }}'
+    owner: '{{ item.owner | default(tls_copy_cert_owner) }}'
+    group: '{{ item.group | default(tls_copy_cert_group) }}'
+    mode: '{{ item.mode | default(tls_copy_cert_mode) }}'
+  no_log: '{{ not debug }}'
+  when: item.ca_path is defined
+  loop: '{{ tls_copy_certs }}'
+  notify: '{{ tls_copy_notify }}'
+
+- name: Update certificates
+  ansible.builtin.copy:
+    content: |
+      {{ item.cert_content }}
+      {% if item.ca_content is defined and item.ca_path is not defined %}
+      {{ item.ca_content }}
+      {% endif %}
+    dest: '{{ item.cert_path }}'
+    owner: '{{ item.owner | default(tls_copy_cert_owner) }}'
+    group: '{{ item.group | default(tls_copy_cert_group) }}'
+    mode: '{{ item.mode | default(tls_copy_cert_mode) }}'
+  no_log: '{{ not debug }}'
+  when: item.cert_content is defined
+  loop: '{{ tls_copy_certs }}'
+  notify: '{{ tls_copy_notify }}'
+
+- name: Update keys
+  community.crypto.openssl_privatekey_convert:
+    src_content: '{{ item.key_content }}'
+    dest_path: '{{ item.key_path }}'
+    format: '{{ item.format | default(tls_copy_key_format) }}'
+    owner: '{{ item.owner | default(tls_copy_key_owner) }}'
+    group: '{{ item.group | default(tls_copy_key_group) }}'
+    mode: '{{ item.mode | default(tls_copy_key_mode) }}'
+  no_log: '{{ not debug }}'
+  when: item.key_content is defined
+  loop: '{{ tls_copy_certs }}'
+  notify: '{{ tls_copy_notify }}'
+
+...

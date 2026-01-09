@@ -1,0 +1,125 @@
+---
+etcd_bin_path: /usr/local/bin
+etcd_config_dir: /etc/etcd
+etcd_config_file: '{{ etcd_config_dir }}/etcd.yml'
+etcd_user: etcd
+etcd_group: etcd
+etcd_data: /var/lib/etcd
+etcd_version: '3.6.7'
+etcd_repo: https://github.com/etcd-io/etcd/releases/download/v{{
+  etcd_version }}
+etcd_download_url: '{{ etcd_repo }}/etcd-v{{ etcd_version
+  }}-linux-amd64.tar.gz'
+
+etcd_syslog_id: etcd
+etcd_max_files: 40000
+etcd_restart_sec: 1s
+
+etcd_ca_cert_path: '{{ undef(hint="etcd_ca_cert_path") }}'
+etcd_cert_path: '{{ undef(hint="etcd_cert_path") }}'
+etcd_key_path: '{{ undef(hint="etcd_key_path") }}'
+etcd_cert:
+  ca_path: '{{ etcd_config_dir }}/ca.crt'
+  cert_path: '{{ etcd_config_dir }}/client.crt'
+  key_path: '{{ etcd_config_dir }}/client.key'
+  ca_content: '{{ lookup("ansible.builtin.file", etcd_ca_cert_path) }}'
+  cert_content: '{{ lookup("ansible.builtin.file", etcd_cert_path) }}'
+  key_content: '{{ lookup("ansible.builtin.file", etcd_key_path) }}'
+
+etcd_peer_ca_cert_path: '{{ undef(hint="etcd_peer_ca_cert_path") }}'
+etcd_peer_cert_path: '{{ undef(hint="etcd_peer_cert_path") }}'
+etcd_peer_key_path: '{{ undef(hint="etcd_peer_key_path") }}'
+etcd_peer_cert:
+  ca_path: '{{ etcd_config_dir }}/peerca.crt'
+  cert_path: '{{ etcd_config_dir }}/peer.crt'
+  key_path: '{{ etcd_config_dir }}/peer.key'
+  ca_content: '{{ lookup("ansible.builtin.file", etcd_peer_ca_cert_path) }}'
+  cert_content: '{{ lookup("ansible.builtin.file", etcd_peer_cert_path) }}'
+  key_content: '{{ lookup("ansible.builtin.file", etcd_peer_key_path) }}'
+
+etcd_name: '{{ undef(hint="etcd_name") }}'
+etcd_ip: '{{ undef(hint="etcd_ip") }}'
+etcd_cluster: '{{ undef(hint="etcd_cluster") }}'
+etcd_metrics_ip: '{{ undef(hint="etcd_metrics_ip") }}'
+
+etcd_config:
+  name: '{{ etcd_name }}'
+  data-dir: '{{ etcd_data }}'
+  wal-dir:
+  snapshot-count: 10000
+  heartbeat-interval: 40
+  election-timeout: 400
+  initial-election-tick-advance: true
+  listen-peer-urls: https://{{ etcd_ip }}:2380
+  listen-client-urls: https://localhost:2379,https://{{ etcd_ip }}:2379
+  listen-client-http-urls: https://localhost:2382,https://{{ etcd_ip }}:2382
+  max-snapshots: 5
+  max-wals: 5
+  quota-backend-bytes: 0
+  backend-bbolt-freelist-type: map
+  backend-batch-interval:
+  backend-batch-limit: 0
+  max-txn-ops: 128
+  max-request-bytes: 1572864
+  max-concurrent-streams: 4294967295
+  enable-grpc-gateway: true
+  socket-reuse-port: false
+  socket-reuse-address: false
+  raft-read-timeout: 5s
+  raft-write-timeout: 5s
+  initial-advertise-peer-urls: https://{{ etcd_ip }}:2380
+  initial-cluster: |-
+    {%- for host in etcd_cluster -%}
+    {{ hostvars[host].etcd_name }}=https://{{ hostvars[host].etcd_ip }}:2380
+    {{- ',' if not loop.last else '' -}}
+    {%- endfor -%}
+  initial-cluster-state: new
+  initial-cluster-token: '{{ ",".join(etcd_cluster) | ansible.builtin.sha1 }}'
+  advertise-client-urls: https://{{ etcd_ip }}:2379
+  strict-reconfig-check: false
+  pre-vote: true
+  auto-compaction-retention: '5m'
+  auto-compaction-mode: periodic
+  enable-v2: false
+  v2-deprecation: gone
+  client-transport-security:
+    cert-file: '{{ etcd_cert.cert_path }}'
+    key-file: '{{ etcd_cert.key_path }}'
+    client-cert-auth: true
+    trusted-ca-file: '{{ etcd_cert.ca_path }}'
+    auto-tls: false
+  peer-transport-security:
+    cert-file: '{{ etcd_peer_cert.cert_path }}'
+    key-file: '{{ etcd_peer_cert.key_path }}'
+    client-cert-auth: true
+    trusted-ca-file: '{{ etcd_peer_cert.ca_path }}'
+    auto-tls: false
+    allowed-cn:
+    allowed-hostname:
+  self-signed-cert-validity: 100
+  cipher-suites:
+    - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+  cors: '*'
+  tls-min-version: TLS1.2
+  tls-max-version:
+  auth-token: simple
+  bcrypt-cost: 10
+  auth-token-ttl: 300
+  enable-pprof: false
+  metrics: extensive
+  listen-metrics-urls: http://{{ etcd_metrics_ip }}:2381
+  logger: zap
+  log-outputs: [default]
+  log-level: info
+  enable-log-rotation: false
+  log-rotation-config-json: |
+    {
+      "maxsize": 100,
+      "maxage": 0,
+      "maxbackups": 0,
+      "localtime": false,
+      "compress": false
+    }
+etcd_config_override: {}
+...

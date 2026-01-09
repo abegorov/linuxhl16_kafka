@@ -1,0 +1,52 @@
+[Unit]
+Description=NetBox Request Queue Worker
+Documentation=https://docs.netbox.dev/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+
+User={{ netbox_user }}
+Group={{ netbox_group }}
+WorkingDirectory={{ netbox_dir }}
+
+ExecStart={{ netbox_dir }}/venv/bin/python3 \
+  {{ netbox_dir }}/netbox/manage.py rqworker high default low
+
+Restart=on-failure
+RestartSec=30
+
+PrivateTmp=true
+ProtectHome=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths={{ netbox_media_dir }}
+ReadWritePaths={{ netbox_reports_dir }}
+ReadWritePaths={{ netbox_scripts_dir }}
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectKernelLogs=true
+ProtectClock=true
+ProtectProc=invisible
+ProtectHostname=true
+
+RemoveIPC=true
+CapabilityBoundingSet=
+PrivateDevices=true
+SystemCallArchitectures=native
+MemoryDenyWriteExecute=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictRealtime=true
+PrivateUsers=true
+ProcSubset=pid
+SystemCallFilter=@system-service
+SystemCallFilter=~@resources @privileged
+UMask=7077
+
+[Install]
+WantedBy=multi-user.target

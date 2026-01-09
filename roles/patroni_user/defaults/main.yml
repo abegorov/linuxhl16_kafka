@@ -1,0 +1,13 @@
+---
+patroni_user_list: []
+patroni_user_comment: '{{ omit }}'
+patroni_user_configuration: '{{ omit }}'
+patroni_user_conn_limit: '{{ omit }}'
+patroni_user_encrypted: '{{ omit }}'
+patroni_user_expires: '{{ omit }}'
+patroni_user_no_password_changes: '{{ omit }}'
+patroni_user_password: '{{ omit }}'
+patroni_user_reset_unspecified_configuration: '{{ omit }}'
+patroni_user_role_attr_flags: '{{ omit }}'
+patroni_user_session_role: '{{ omit }}'
+...

@@ -1,0 +1,33 @@
+---
+- name: Install kibana
+  ansible.builtin.import_tasks: install.yml
+  tags: [kibana, kibana_install]
+
+- name: Import certs tasks
+  ansible.builtin.import_role:
+    name: tls_copy
+    public: false
+  vars:
+    tls_copy_certs:
+      - '{{ kibana_cert }}'
+      - '{{ kibana_elasticsearch_cert }}'
+    tls_copy_dir_owner: root
+    tls_copy_dir_group: kibana
+    tls_copy_dir_mode: '0750'
+    tls_copy_cert_owner: root
+    tls_copy_cert_group: kibana
+    tls_copy_cert_mode: '0660'
+    tls_copy_key_owner: root
+    tls_copy_key_group: kibana
+    tls_copy_key_mode: '0660'
+    tls_copy_notify: Restart kibana service
+  tags: [kibana, kibana_certs]
+
+- name: Configure kibana
+  ansible.builtin.import_tasks: config.yml
+  tags: [kibana, kibana_config]
+
+- name: Force all notified handlers to run
+  ansible.builtin.meta: flush_handlers
+  tags: [kibana, kibana_config]
+...

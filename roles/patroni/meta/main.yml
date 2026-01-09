@@ -1,0 +1,5 @@
+---
+dependencies:
+  - role: etcd
+  - role: pgdg_repo
+...

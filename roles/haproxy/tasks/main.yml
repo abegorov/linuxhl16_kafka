@@ -1,0 +1,23 @@
+---
+- name: Import install tasks
+  ansible.builtin.import_tasks: install.yml
+  tags: [haproxy, haproxy_install]
+
+- name: Import certs tasks
+  ansible.builtin.import_role:
+    name: tls_copy
+    public: false
+  vars:
+    tls_copy_certs: '{{ haproxy_certs }}'
+    tls_copy_key_owner: haproxy
+    tls_copy_notify: Reload haproxy service
+  tags: [haproxy, haproxy_certs]
+
+- name: Configure haproxy
+  ansible.builtin.import_tasks: config.yml
+  tags: [haproxy, haproxy_config]
+
+- name: Force all notified handlers to run
+  ansible.builtin.meta: flush_handlers
+  tags: [haproxy, haproxy_certs, haproxy_config]
+...

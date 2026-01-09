@@ -1,0 +1,46 @@
+---
+redis_sentinel_myid: '{{ lookup("ansible.builtin.password", "/dev/null",
+  length=40, chars="0123456789abcdef", seed=inventory_hostname) }}'
+redis_sentinel_replicas: ''
+redis_sentinel_sentinels: ''
+redis_sentinel_cert_path: /etc/redis/server.crt
+redis_sentinel_key_path: /etc/redis/server.key
+redis_sentinel_ca_path: /etc/redis/serverca.crt
+redis_sentinel_conf: '{{ redis_sentinel_conf_default |
+  ansible.builtin.combine(redis_sentinel_conf_override) }}'
+redis_sentinel_conf_default:
+  protected-mode: true
+  # START https://ssl-config.mozilla.org/#server=redis
+  port: 0
+  tls-port: 26379
+  tls-cluster: true
+  tls-replication: true
+  tls-cert-file: '{{ redis_sentinel_cert_path }}'
+  tls-key-file: '{{ redis_sentinel_key_path }}'
+  tls-ca-cert-file: '{{ redis_sentinel_ca_path }}'
+  tls-protocols: '"TLSv1.2 TLSv1.3"'
+  tls-prefer-server-ciphers: false
+  tls-ciphers: '{{ redis_tls_ciphers | join(":") }}'
+  tls-ciphersuites: '{{ redis_tls_ciphersuites | join(":") }}'
+  tls-dh-params-file: /etc/redis/dhparam
+  # END https://ssl-config.mozilla.org/#server=redis
+  tcp-backlog: 511
+  daemonize: true
+  supervised: systemd
+  pidfile: "/run/sentinel/redis-sentinel.pid"
+  loglevel: notice
+  logfile: "/var/log/redis/redis-sentinel.log"
+  dir: "/var/lib/redis"
+  sentinel monitor mymaster: 127.0.0.1 6379 2
+  acllog-max-len: 128
+  sentinel deny-scripts-reconfig: true
+  sentinel resolve-hostnames: false
+  sentinel announce-hostnames: false
+  latency-tracking-info-percentiles: 50 99 99.9
+  user default: on nopass sanitize-payload ~* &* +@all
+  sentinel myid: '{{ redis_sentinel_myid }}'
+  sentinel config-epoch mymaster: 0
+  sentinel leader-epoch mymaster: 0
+  sentinel current-epoch: 0
+redis_sentinel_conf_override: {}
+...

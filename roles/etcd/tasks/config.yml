@@ -1,0 +1,46 @@
+---
+- name: Create etcd data directory
+  ansible.builtin.file:
+    path: '{{ etcd_data }}'
+    state: directory
+    owner: '{{ etcd_user }}'
+    group: '{{ etcd_group }}'
+    mode: '0700'
+
+- name: Create config directory
+  ansible.builtin.file:
+    path: '{{ etcd_config_dir }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Update config file
+  ansible.builtin.copy:
+    content: '{{ etcd_config |
+      ansible.builtin.combine(etcd_config_override, recursive=True) |
+      ansible.builtin.to_nice_yaml(indent=2, sort_keys=False,
+        explicit_start=True, explicit_end=True) }}'
+    dest: '{{ etcd_config_file }}'
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart service etcd
+
+- name: Update etcd systemd service
+  ansible.builtin.template:
+    src: etcd.service
+    dest: /etc/systemd/system/etcd.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart service etcd
+
+- name: Enable and start etcd service
+  ansible.builtin.systemd_service:
+    name: etcd.service
+    enabled: true
+    daemon_reload: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+...

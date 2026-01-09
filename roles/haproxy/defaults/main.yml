@@ -1,0 +1,88 @@
+---
+haproxy_version: 3.3
+haproxy_certs: []
+
+haproxy_ssl_default_curves:
+  - X25519
+  - prime256v1
+  - secp384r1
+haproxy_ssl_default_ciphers:
+  - ECDHE-ECDSA-AES128-GCM-SHA256
+  - ECDHE-RSA-AES128-GCM-SHA256
+  - ECDHE-ECDSA-AES256-GCM-SHA384
+  - ECDHE-RSA-AES256-GCM-SHA384
+  - ECDHE-ECDSA-CHACHA20-POLY1305
+  - ECDHE-RSA-CHACHA20-POLY1305
+  - DHE-RSA-AES128-GCM-SHA256
+  - DHE-RSA-AES256-GCM-SHA384
+  - DHE-RSA-CHACHA20-POLY1305
+haproxy_ssl_default_ciphersuites:
+  - TLS_AES_128_GCM_SHA256
+  - TLS_AES_256_GCM_SHA384
+  - TLS_CHACHA20_POLY1305_SHA256
+haproxy_ssl_default_options:
+  - ssl-min-ver TLSv1.2
+  - no-tls-tickets
+
+# https://ssl-config.mozilla.org/ffdhe2048.txt
+haproxy_dhparam: |
+  -----BEGIN DH PARAMETERS-----
+  MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz
+  +8yTnc4kmz75fS/jY2MMddj2gbICrsRhetPfHtXV/WVhJDP1H18GbtCFY2VVPe0a
+  87VXE15/V8k1mE8McODmi3fipona8+/och3xWKE2rec1MKzKT0g6eXq8CrGCsyT7
+  YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi
+  7MA0BM0oNC9hkXL+nOmFg/+OTxIy7vKBg8P+OxtMb61zO7X8vC7CIAXFjvGDfRaD
+  ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
+  -----END DH PARAMETERS-----
+
+haproxy_config: '{{ haproxy_config_default |
+  ansible.builtin.combine(haproxy_config_override) |
+  ansible.builtin.combine(haproxy_config_append, list_merge="append_rp") }}'
+haproxy_config_default:
+  global:
+    - log /dev/log local0
+    - log /dev/log local1 notice
+    - chroot /var/lib/haproxy
+    - stats socket /run/haproxy/admin.sock mode 660 level admin
+    - stats timeout 30000
+    - user haproxy
+    - group haproxy
+    - daemon
+    -
+    - '# Default SSL material locations'
+    - ca-base /etc/haproxy
+    - crt-base /etc/haproxy
+    - key-base /etc/haproxy
+    -
+    - '# See: https://ssl-config.mozilla.org/#server=haproxy'
+    - ssl-default-bind-curves {{ haproxy_ssl_default_curves | join(":") }}
+    - ssl-default-bind-ciphers {{ haproxy_ssl_default_ciphers | join(":") }}
+    - ssl-default-bind-ciphersuites {{ haproxy_ssl_default_ciphersuites |
+      join(":") }}
+    - ssl-default-bind-options {{ haproxy_ssl_default_options | join(" ") }}
+    - ssl-default-server-curves {{ haproxy_ssl_default_curves | join(":") }}
+    - ssl-default-server-ciphers {{ haproxy_ssl_default_ciphers | join(":") }}
+    - ssl-default-server-ciphersuites {{ haproxy_ssl_default_ciphersuites |
+      join(":") }}
+    - ssl-default-server-options {{ haproxy_ssl_default_options | join(" ") }}
+    - ssl-dh-param-file /etc/haproxy/dhparam
+    -
+    - maxconn 400
+  defaults:
+    - log     global
+    - mode    tcp
+    - retries 2
+    - timeout connect 4s
+    - timeout client  30m
+    - timeout server  30m
+    - timeout check   1s
+    - errorfile 400 /etc/haproxy/errors/400.http
+    - errorfile 403 /etc/haproxy/errors/403.http
+    - errorfile 408 /etc/haproxy/errors/408.http
+    - errorfile 500 /etc/haproxy/errors/500.http
+    - errorfile 502 /etc/haproxy/errors/502.http
+    - errorfile 503 /etc/haproxy/errors/503.http
+    - errorfile 504 /etc/haproxy/errors/504.http
+haproxy_config_override: {}
+haproxy_config_append: {}
+...

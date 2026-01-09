@@ -1,0 +1,30 @@
+---
+- name: Import install tasks
+  ansible.builtin.import_tasks: install.yml
+  tags: [patroni, patroni_install]
+
+- name: Import certs tasks
+  ansible.builtin.import_role:
+    name: tls_copy
+    public: false
+  vars:
+    tls_copy_certs:
+      - '{{ patroni_cert }}'
+      - '{{ patroni_etcd_cert }}'
+      - '{{ patroni_pgsql_cert }}'
+    tls_copy_key_owner: postgres
+    tls_copy_notify: Restart service patroni
+  tags: [patroni, patroni_certs]
+
+- name: Import config tasks
+  ansible.builtin.import_tasks: config.yml
+  tags: [patroni, patroni_config]
+
+- name: Import patronictl tasks
+  ansible.builtin.import_tasks: patronictl.yml
+  tags: [patroni, patroni_patronictl]
+
+- name: Force all notified handlers to run
+  ansible.builtin.meta: flush_handlers
+  tags: [patroni, patroni_certs, patroni_config]
+...

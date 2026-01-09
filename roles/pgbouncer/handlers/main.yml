@@ -1,0 +1,13 @@
+---
+- name: Reload pgbouncer service
+  ansible.builtin.systemd_service:
+    name: pgbouncer.service
+    state: reloaded
+  ignore_errors: '{{ ansible_check_mode }}'
+
+- name: Restart pgbouncer service
+  ansible.builtin.systemd_service:
+    name: pgbouncer.service
+    state: restarted
+  ignore_errors: '{{ ansible_check_mode }}'
+...

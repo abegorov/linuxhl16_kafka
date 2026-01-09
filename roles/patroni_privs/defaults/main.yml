@@ -1,0 +1,9 @@
+---
+patroni_privs_list: []
+patroni_privs_grant_option: '{{ omit }}'
+patroni_privs_objs: '{{ omit }}'
+patroni_privs_privs: '{{ omit }}'
+patroni_privs_schema: '{{ omit }}'
+patroni_privs_session_role: '{{ omit }}'
+patroni_privs_type: '{{ omit }}'
+...

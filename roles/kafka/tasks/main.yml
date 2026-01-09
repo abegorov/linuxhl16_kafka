@@ -1,0 +1,5 @@
+---
+- name: Install kafka
+  ansible.builtin.import_tasks: install.yml
+  tags: [kafka, kafka_install]
+...

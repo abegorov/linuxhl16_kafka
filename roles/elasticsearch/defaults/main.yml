@@ -1,0 +1,70 @@
+---
+elasticsearch_cert:
+  ca_path: /etc/elasticsearch/certs/http_ca.crt'
+  cert_path: /etc/elasticsearch/certs/http.crt
+  key_path: /etc/elasticsearch/certs/http.key'
+  ca_content: '{{ lookup("ansible.builtin.file", elasticsearch_ca_cert_path) }}'
+  cert_content: '{{ lookup("ansible.builtin.file", elasticsearch_cert_path) }}'
+  key_content: '{{ lookup("ansible.builtin.file", elasticsearch_key_path) }}'
+elasticsearch_transport_cert:
+  ca_path: /etc/elasticsearch/certs/transport_ca.crt'
+  cert_path: /etc/elasticsearch/certs/transport.crt
+  key_path: /etc/elasticsearch/certs/transport.key'
+  ca_content: '{{ lookup("ansible.builtin.file", elasticsearch_transport_ca_cert_path) }}'
+  cert_content: '{{ lookup("ansible.builtin.file", elasticsearch_transport_cert_path) }}'
+  key_content: '{{ lookup("ansible.builtin.file", elasticsearch_transport_key_path) }}'
+
+elasticsearch_cipher_suites:
+  - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+  - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+  - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+  - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+
+elasticsearch_jvm_options: ''
+elasticsearch_jvm_options_file: /etc/elasticsearch/jvm.options.d/ansible
+
+elasticsearch_config: '{{ elasticsearch_config_default |
+  ansible.builtin.combine(elasticsearch_config_override, recursive=True) }}'
+elasticsearch_config_default:
+  path.data: /var/lib/elasticsearch
+  path.logs: /var/log/elasticsearch
+  xpack.security.enabled: true
+  xpack.security.autoconfiguration.enabled: false
+  xpack.security.enrollment.enabled: false
+  xpack.security.http.ssl:
+    enabled: true
+    key: '{{ elasticsearch_cert.key_path }}'
+    certificate: '{{ elasticsearch_cert.cert_path }}'
+    certificate_authorities: ['{{ elasticsearch_cert.ca_path }}']
+    cipher_suites: '{{ elasticsearch_cipher_suites | join(",") }}'
+    supported_protocols: TLSv1.3,TLSv1.2
+    client_authentication: none
+    verification_mode: full
+  xpack.security.transport.ssl:
+    enabled: true
+    key: '{{ elasticsearch_transport_cert.key_path }}'
+    certificate: '{{ elasticsearch_transport_cert.cert_path }}'
+    certificate_authorities: ['{{ elasticsearch_transport_cert.ca_path }}']
+    cipher_suites: '{{ elasticsearch_cipher_suites | join(",") }}'
+    supported_protocols: TLSv1.3,TLSv1.2
+    client_authentication: required
+    verification_mode: certificate
+  cluster.initial_master_nodes: ['{{ inventory_hostname }}']
+  network.host: 0.0.0.0
+elasticsearch_config_override: {}
+
+elasticsearch_role_mapping: {}
+elasticsearch_roles: {}
+elasticsearch_users: ''
+elasticsearch_users_roles: ''
+
+elasticsearch_url: https://localhost:9200
+
+elasticsearch_update_passwords: true
+elasticsearch_elastic_password: ''
+elasticsearch_kibana_password: ''
+elasticsearch_logstash_password: ''
+elasticsearch_beats_password: ''
+elasticsearch_apm_password: ''
+elasticsearch_monitoring_password: ''
+...

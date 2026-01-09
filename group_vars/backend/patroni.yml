@@ -1,0 +1,30 @@
+---
+etcd_user: etcd
+etcd_group: etcd
+etcd_data: /var/lib/etcd
+
+etcd_name: '{{ inventory_hostname }}'
+etcd_ip: '{{ ip_address }}'
+etcd_cluster: '{{ groups["backend"] }}'
+etcd_metrics_ip: '{{ ip_address }}'
+
+patroni_replication_passwd: '{{ lookup("ansible.builtin.password",
+  "secrets/patroni_replication_passwd.txt", length=26) }}'
+patroni_rewind_passwd: '{{ lookup("ansible.builtin.password",
+  "secrets/patroni_rewind_passwd.txt", length=26) }}'
+
+patroni_db_list:
+  - name: '{{ netbox_db }}'
+    owner: '{{ netbox_db_user }}'
+
+patroni_user_list:
+  - name: '{{ netbox_db_user }}'
+    password: '{{ netbox_db_password }}'
+
+patroni_privs_list:
+  - login_db: '{{ netbox_db }}'
+    objs: public
+    privs: CREATE
+    roles: '{{ netbox_db_user }}'
+    type: schema
+...

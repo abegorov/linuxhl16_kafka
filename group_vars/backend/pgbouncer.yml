@@ -1,0 +1,28 @@
+---
+pgbouncer_certs:
+  - ca_path: /etc/pgbouncer/ca.crt
+    cert_path: /etc/pgbouncer/server.crt
+    key_path: /etc/pgbouncer/server.key
+    ca_content: '{{ lookup("ansible.builtin.file", pgsql_ca_cert_path) }}'
+    cert_content: '{{ lookup("ansible.builtin.file", pgsql_cert_path) }}'
+    key_content: '{{ lookup("ansible.builtin.file", pgsql_key_path) }}'
+
+pgbouncer_config_override:
+  databases:
+    '*':
+  pgbouncer:
+    listen_addr: localhost,{{ ip_address }}
+    auth_user: postgres
+    client_tls_sslmode: verify-ca
+    client_tls_ca_file: /etc/pgbouncer/ca.crt
+    client_tls_cert_file: /etc/pgbouncer/server.crt
+    client_tls_key_file: /etc/pgbouncer/server.key
+    client_tls_protocols: secure
+    client_tls_ciphers: secure
+    server_tls_sslmode: verify-full
+    server_tls_ca_file: /etc/pgbouncer/ca.crt
+    server_tls_cert_file: /etc/pgbouncer/server.crt
+    server_tls_key_file: /etc/pgbouncer/server.key
+    server_tls_protocols: secure
+    server_tls_ciphers: secure
+...

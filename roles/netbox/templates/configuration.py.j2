@@ -1,0 +1,32 @@
+{% macro print_value(value) -%}
+  {%- if value is none -%}
+    None
+  {%- elif value is boolean -%}
+    {{ 'True' if value else 'False' }}
+  {%- elif value is number -%}
+    {{ value | string }}
+  {%- elif value is string -%}
+    {%- if value.startswith('(') and value.endswith(')') -%}
+      {{ value }}
+    {%- else -%}
+      '{{ value }}'
+    {%- endif -%}
+  {%- elif value is mapping -%}
+{
+    {%- for k, v in value.items() -%}
+      {{- '\n' if loop.first -}}
+      {{ '  ' }}'{{ k }}': {{ print_value(v) | indent(2) }},{{ '\n' }}
+    {%- endfor -%}
+}
+  {%- elif value is sequence -%}
+[
+    {%- for v in value -%}
+      {{- '\n' if loop.first -}}
+      {{ '  ' }}{{ print_value(v) | indent(2) }},{{ '\n' }}
+    {%- endfor -%}
+]
+  {%- endif -%}
+{%- endmacro -%}
+{% for key, value in netbox_conf.items() %}
+{{ key }} = {{ print_value(value) }}
+{% endfor %}

@@ -1,0 +1,51 @@
+[Unit]
+Description=etcd key-value store
+Documentation=https://github.com/etcd-io/etcd
+After=network-online.target local-fs.target remote-fs.target time-sync.target
+Wants=network-online.target local-fs.target remote-fs.target time-sync.target
+
+[Service]
+Type=notify
+User={{ etcd_user }}
+Group={{ etcd_group }}
+Environment=CONFIG={{ etcd_config_file | ansible.builtin.quote }}
+ExecStart={{ etcd_bin_path }}/etcd --config-file "${CONFIG}"
+LimitNOFILE={{ etcd_max_files }}
+Nice=-20
+
+SyslogIdentifier={{ etcd_syslog_id }}
+RestartSec={{ etcd_restart_sec }}
+Restart=on-failure
+StartLimitInterval=0
+
+PrivateTmp=true
+ProtectHome=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths={{ etcd_data | ansible.builtin.quote }}
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectKernelLogs=true
+ProtectClock=true
+ProtectProc=invisible
+ProtectHostname=true
+
+RemoveIPC=true
+CapabilityBoundingSet=
+PrivateDevices=true
+SystemCallArchitectures=native
+MemoryDenyWriteExecute=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictRealtime=true
+PrivateUsers=true
+ProcSubset=pid
+SystemCallFilter=@system-service
+SystemCallFilter=~@resources @privileged
+UMask=7077
+
+[Install]
+WantedBy=multi-user.target

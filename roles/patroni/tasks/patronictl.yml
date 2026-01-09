@@ -1,0 +1,7 @@
+---
+- name: Setting PATRONICTL_CONFIG_FILE for root
+  ansible.builtin.lineinfile:
+    path: /root/.bashrc
+    regexp: '^export PATRONICTL_CONFIG_FILE='
+    line: export PATRONICTL_CONFIG_FILE=/etc/patroni/config.yml
+...

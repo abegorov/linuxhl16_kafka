@@ -1,0 +1,28 @@
+---
+kibana_config_override:
+  server.name: '{{ inventory_hostname }}'
+  server.host: '{{ ip_address }}'
+  server.port: 5601
+  server.publicBaseUrl: https://{{ ip_address }}:5601
+  elasticsearch.hosts: '{{ groups["elasticsearch"] |
+    map("ansible.builtin.extract", hostvars, "elasticsearch_url") }}'
+  elasticsearch.username: kibana_system
+  elasticsearch.password: '{{ elasticsearch_kibana_password }}'
+
+kibana_node_options: |
+  --max-old-space-size=512
+  --unhandled-rejections=warn
+  --dns-result-order=ipv4first
+  --no-experimental-require-module
+
+kibana_dataview_url: https://{{ ip_address }}:5601
+kibana_dataview_create:
+  angie: filebeat-nginx-*
+  elasticsearch: filebeat-elasticsearch-*
+  haproxy: filebeat-haproxy-*
+  kibana: filebeat-kibana-*
+  logstash: filebeat-logstash-*
+  postgresql: filebeat-postgresql-*
+  redis: filebeat-redis-*
+  system: filebeat-system-*
+...

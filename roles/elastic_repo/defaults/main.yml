@@ -1,0 +1,5 @@
+---
+elastic_repo_url: https://mirror.yandex.ru/mirrors/elastic/8
+elastic_repo_key_checksum: "sha256:\
+  db52809c5f6b27f9c2bed45cb43e398c659275f3d35305653c6750a0db90f5eb"
+...

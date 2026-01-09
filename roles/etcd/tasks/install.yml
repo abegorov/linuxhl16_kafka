@@ -1,0 +1,35 @@
+---
+- name: Check if etcd is installed
+  ansible.builtin.stat:
+    path: '{{ etcd_bin_path }}/etcd'
+  changed_when: false
+  check_mode: false
+  register: _etcd_is_installed
+
+- name: Check current etcd version
+  ansible.builtin.command:
+    cmd: '{{ etcd_bin_path }}/etcd --version'
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  register: _etcd_current_version
+  when: _etcd_is_installed.stat.exists
+
+- name: Download and unarchive etcd release binary
+  ansible.builtin.unarchive:
+    src: '{{ etcd_download_url }}'
+    dest: '{{ etcd_bin_path }}'
+    remote_src: true
+    include:
+      - etcd-v{{ etcd_version }}-linux-amd64/etcd
+      - etcd-v{{ etcd_version }}-linux-amd64/etcdctl
+      - etcd-v{{ etcd_version }}-linux-amd64/etcdutl
+    extra_opts: --strip-components=1
+    owner: root
+    group: root
+    mode: '0755'
+  when: not _etcd_is_installed.stat.exists
+    or etcd_version not in
+      _etcd_current_version.stdout_lines | first
+  notify: Restart service etcd
+...

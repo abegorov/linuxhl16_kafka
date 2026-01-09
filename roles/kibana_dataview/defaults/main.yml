@@ -1,0 +1,8 @@
+---
+kibana_dataview_url: https://localhost:5601
+kibana_dataview_username: elastic
+kibana_dataview_password: '{{ elasticsearch_elastic_password }}'
+kibana_dataview_ca_path: '{{ omit }}'
+kibana_dataview_validate_certs: false
+kibana_dataview_create: {}
+...

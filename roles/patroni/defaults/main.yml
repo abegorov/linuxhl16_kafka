@@ -1,0 +1,292 @@
+---
+patroni_debug: '{{ debug }}'
+
+patroni_pgsql_version: 18
+
+patroni_etcd_cluster: '{{ etcd_cluster }}'
+patroni_etcd_cert:
+  ca_path: /etc/patroni/etcdca.crt
+  cert_path: /etc/patroni/etcd.crt
+  key_path: /etc/patroni/etcd.key
+  ca_content: '{{ lookup("ansible.builtin.file", etcd_ca_cert_path) }}'
+  cert_content: '{{ lookup("ansible.builtin.file", etcd_cert_path) }}'
+  key_content: '{{ lookup("ansible.builtin.file", etcd_key_path) }}'
+
+patroni_listen_ip: '{{ ip_address }}'
+patroni_ca_cert_path: '{{ undef(hint="patroni_ca_cert_path") }}'
+patroni_cert_path: '{{ undef(hint="patroni_cert_path") }}'
+patroni_key_path: '{{ undef(hint="patroni_key_path") }}'
+patroni_cert:
+  ca_path: /etc/patroni/patronica.crt
+  cert_path: /etc/patroni/patroni.crt
+  key_path: /etc/patroni/patroni.key
+  ca_content: '{{ lookup("ansible.builtin.file", patroni_ca_cert_path) }}'
+  cert_content: '{{ lookup("ansible.builtin.file", patroni_cert_path) }}'
+  key_content: '{{ lookup("ansible.builtin.file", patroni_key_path) }}'
+
+# https://ssl-config.mozilla.org/#server=postgresql
+patroni_pgsql_ssl_ciphers:
+  - ECDHE-ECDSA-AES128-GCM-SHA256
+  - ECDHE-RSA-AES128-GCM-SHA256
+  - ECDHE-ECDSA-AES256-GCM-SHA384
+  - ECDHE-RSA-AES256-GCM-SHA384
+  - ECDHE-ECDSA-CHACHA20-POLY1305
+  - ECDHE-RSA-CHACHA20-POLY1305
+  - DHE-RSA-AES128-GCM-SHA256
+  - DHE-RSA-AES256-GCM-SHA384
+  - DHE-RSA-CHACHA20-POLY1305
+
+# https://ssl-config.mozilla.org/ffdhe2048.txt
+patroni_pgsql_dhparam: |
+  -----BEGIN DH PARAMETERS-----
+  MIIBCAKCAQEA//////////+t+FRYortKmq/cViAnPTzx2LnFg84tNpWp4TZBFGQz
+  +8yTnc4kmz75fS/jY2MMddj2gbICrsRhetPfHtXV/WVhJDP1H18GbtCFY2VVPe0a
+  87VXE15/V8k1mE8McODmi3fipona8+/och3xWKE2rec1MKzKT0g6eXq8CrGCsyT7
+  YdEIqUuyyOP7uWrat2DX9GgdT0Kj3jlN9K5W7edjcrsZCwenyO4KbXCeAvzhzffi
+  7MA0BM0oNC9hkXL+nOmFg/+OTxIy7vKBg8P+OxtMb61zO7X8vC7CIAXFjvGDfRaD
+  ssbzSibBsu/6iGtCOGEoXJf//////////wIBAg==
+  -----END DH PARAMETERS-----
+
+patroni_pgsql_listen: '{{ ip_address }}'
+
+patroni_pgsql_cert:
+  ca_path: /etc/patroni/pgsqlca.crt
+  cert_path: /etc/patroni/pgsql.crt
+  key_path: /etc/patroni/pgsql.key
+  ca_content: '{{ lookup("ansible.builtin.file", pgsql_ca_cert_path) }}'
+  cert_content: '{{ lookup("ansible.builtin.file", pgsql_cert_path) }}'
+  key_content: '{{ lookup("ansible.builtin.file", pgsql_key_path) }}'
+
+patroni_replication_passwd: '{{ undef(hint="patroni_replication_passwd") }}'
+patroni_rewind_passwd: '{{ undef(hint="patroni_rewind_passwd") }}'
+
+patroni_initdb_options: >-
+  --encoding=UTF8
+  --locale=ru_RU.UTF-8
+  --locale-provider=icu
+  --icu-locale=ru
+  --data-checksums
+
+patroni_config:
+  scope: '{{ patroni_pgsql_version }}-patroni'
+  namespace: /postgresql-common/
+  name: '{{ inventory_hostname }}'
+
+  etcd3:
+    hosts: |-
+      {%- for host in patroni_etcd_cluster -%}
+      {{ hostvars[host].etcd_ip }}:2382
+      {{- ',' if not loop.last else '' -}}
+      {%- endfor -%}
+    protocol: https
+    use_proxies: true
+    cacert: '{{ patroni_etcd_cert.ca_path }}'
+    cert: '{{ patroni_etcd_cert.cert_path }}'
+    key: '{{ patroni_etcd_cert.key_path }}'
+
+  restapi:
+    listen: '{{ patroni_listen_ip }}:8008'
+    connect_address: '{{ patroni_listen_ip }}:8008'
+    cafile: '{{ patroni_cert.ca_path }}'
+    certfile: '{{ patroni_cert.cert_path }}'
+    keyfile: '{{ patroni_cert.key_path }}'
+    verify_client: required
+
+  ctl:
+    insecure: false
+    cafile: '{{ patroni_cert.ca_path }}'
+    certfile: '{{ patroni_cert.cert_path }}'
+    keyfile: '{{ patroni_cert.key_path }}'
+
+  tags:
+    clonefrom: false
+    noloadbalance: false
+    nosync: false
+    nofailover: false
+    nostream: false
+
+  bootstrap:
+    method: pg_createcluster
+    pg_createcluster:
+      command: /usr/share/patroni/pg_createcluster_patroni
+
+    dcs:
+      ttl: 20
+      loop_wait: 1
+      retry_timeout: 3
+      maximum_lag_on_failover: 0
+      maximum_lag_on_syncnode: 1048576
+      max_timelines_history: 0
+      primary_start_timeout: 0
+      primary_stop_timeout: 300
+      synchronous_mode: quorum
+      synchronous_mode_strict: true
+      synchronous_node_count: 1
+      failsafe_mode: false
+      check_timeline: true
+      master_start_timeout: 300
+
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      parameters:
+        max_connections: 100
+        max_locks_per_transaction: 128
+        max_worker_processes: 2
+        max_prepared_transactions: 0
+        wal_level: logical
+        track_commit_timestamp: true
+        max_wal_senders: 16
+        max_replication_slots: 16
+        wal_keep_size: 3650MB
+
+  postgresql:
+    create_replica_method:
+      - pg_clonecluster
+    pg_clonecluster:
+      command: /usr/share/patroni/pg_clonecluster_patroni
+
+    listen: '127.0.0.1,::1,{{ patroni_pgsql_listen }}:5432'
+    connect_address: '{{ patroni_pgsql_listen }}:5432'
+    use_unix_socket: true
+    data_dir: /var/lib/postgresql/{{ patroni_pgsql_version }}/patroni
+    bin_dir: /usr/lib/postgresql/{{ patroni_pgsql_version }}/bin
+    config_dir: /etc/postgresql/{{ patroni_pgsql_version }}/patroni
+    pgpass: /var/lib/postgresql/{{ patroni_pgsql_version }}-patroni.pgpass
+
+    use_pg_rewind: true
+    remove_data_directory_on_rewind_failure: true
+    remove_data_directory_on_diverged_timelines: true
+    use_slots: true
+
+    authentication:
+      replication:
+        username: replicator
+        password: '{{ patroni_replication_passwd }}'
+        sslmode: verify-full
+        sslrootcert: '{{ patroni_pgsql_cert.ca_path }}'
+        sslcert: '{{ patroni_pgsql_cert.cert_path }}'
+        sslkey: '{{ patroni_pgsql_cert.key_path }}'
+      rewind:
+        username: rewind
+        password: '{{ patroni_rewind_passwd }}'
+        sslmode: verify-full
+        sslrootcert: '{{ patroni_pgsql_cert.ca_path }}'
+        sslcert: '{{ patroni_pgsql_cert.cert_path }}'
+        sslkey: '{{ patroni_pgsql_cert.key_path }}'
+      superuser:
+        username: postgres
+
+    parameters:
+      ssl: true
+      ssl_ca_file: '{{ patroni_pgsql_cert.ca_path }}'
+      ssl_cert_file: '{{ patroni_pgsql_cert.cert_path }}'
+      ssl_key_file: '{{ patroni_pgsql_cert.key_path }}'
+      ssl_min_protocol_version: TLSv1.2
+      ssl_ciphers: '{{ patroni_pgsql_ssl_ciphers | join(":") }}'
+      ssl_dh_params_file: /etc/patroni/dhparam
+      unix_socket_directories: '/var/run/postgresql/'
+      wal_log_hints: true
+      password_encryption: scram-sha-256
+      # https://pgconfigurator.cybertec.at/
+      shared_buffers: 512MB
+      work_mem: 64MB
+      maintenance_work_mem: 320MB
+      huge_pages: try
+      effective_cache_size: 1GB
+      random_page_cost: 1.25
+      shared_preload_libraries: pg_stat_statements, auto_explain
+      track_io_timing: true
+      rack_functions: pl
+      checkpoint_timeout: 15min
+      checkpoint_completion_target: 0.95
+      max_wal_size: 1024MB
+      min_wal_size: 512MB
+      archive_mode: true
+      archive_command: '/bin/true'
+      wal_compression: true
+      wal_buffers: 16MB
+      wal_writer_delay: 20ms
+      wal_writer_flush_after: 1MB
+      bgwriter_delay: 10ms
+      bgwriter_lru_maxpages: 800
+      bgwriter_lru_multiplier: 5.0
+      bgwriter_flush_after: 0
+      max_parallel_workers_per_gather: 1
+      max_parallel_maintenance_workers: 1
+      max_parallel_workers: 2
+      parallel_leader_participation: true
+      enable_partitionwise_join: true
+      enable_partitionwise_aggregate: true
+      jit: true
+      max_slot_wal_keep_size: 1000MB
+      track_wal_io_timing: true
+      maintenance_io_concurrency: 100
+      wal_recycle: true
+      effective_io_concurrency: 100
+      superuser_reserved_connections: 10
+      # http://v0.pigsty.cc/en/docs/deploy/customize/patroni/
+      temp_file_limit: 1GB
+      vacuum_cost_delay: 2ms
+      vacuum_cost_limit: 10000
+      commit_delay: 20
+      commit_siblings: 10
+      vacuum_defer_cleanup_age: 50000
+      promote_trigger_file: promote.signal
+      max_standby_archive_delay: 10min
+      max_standby_streaming_delay: 3min
+      wal_receiver_status_interval: 1s
+      hot_standby_feedback: true
+      wal_receiver_timeout: 60s
+      max_logical_replication_workers: 8
+      max_sync_workers_per_subscription: 8
+      default_statistics_target: 1000
+      log_destination: csvlog
+      logging_collector: true
+      log_directory: /var/log/postgresql
+      log_filename: postgresql-{{ patroni_pgsql_version }}-patroni-%Y-%m-%d.log
+      log_checkpoints: true
+      log_lock_waits: true
+      log_replication_commands: true
+      log_statement: ddl
+      log_min_duration_statement: 100
+      track_functions: all
+      track_activity_query_size: 8192
+      log_autovacuum_min_duration: 1s
+      autovacuum_max_workers: 3
+      autovacuum_naptime: 1min
+      autovacuum_vacuum_scale_factor: 0.08
+      autovacuum_analyze_scale_factor: 0.04
+      autovacuum_vacuum_cost_delay: -1
+      autovacuum_vacuum_cost_limit: -1
+      autovacuum_freeze_max_age: 100000000
+      deadlock_timeout: 50ms
+      idle_in_transaction_session_timeout: 10min
+      auto_explain.log_min_duration: 1s
+      auto_explain.log_analyze: true
+      auto_explain.log_verbose: true
+      auto_explain.log_timing: true
+      auto_explain.log_nested_statements: true
+      pg_stat_statements.max: 10000
+      pg_stat_statements.track: all
+      pg_stat_statements.track_utility: false
+      pg_stat_statements.track_planning: false
+
+    pg_hba:
+      - local   all             postgres                     peer
+      - local   all             all                          scram-sha-256
+      - hostssl all             all           127.0.0.1/32   scram-sha-256
+        clientcert=verify-ca
+      - hostssl all             all           ::1/128        scram-sha-256
+        clientcert=verify-ca
+      - hostssl all             all           all            scram-sha-256
+        clientcert=verify-ca
+      - local   replication     postgres                     peer
+      - hostssl replication     all           127.0.0.1/32   scram-sha-256
+        clientcert=verify-ca
+      - hostssl replication     all           ::1/128        scram-sha-256
+        clientcert=verify-ca
+      - hostssl replication     all           all            scram-sha-256
+        clientcert=verify-ca
+patroni_config_override: {}
+...

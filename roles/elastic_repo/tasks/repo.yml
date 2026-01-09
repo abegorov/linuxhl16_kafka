@@ -1,0 +1,35 @@
+---
+- name: Install required packages
+  ansible.builtin.apt:
+    name: apt-transport-https
+    update_cache: true
+    state: present
+  retries: 10
+  delay: 10
+
+- name: Update elastic repo gpg key
+  ansible.builtin.get_url:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    dest: /etc/apt/keyrings/elastic.asc
+    owner: root
+    group: root
+    mode: '0644'
+    checksum: '{{ elastic_repo_key_checksum }}'
+
+- name: Update elastic repository
+  ansible.builtin.copy:
+    content: >
+      deb
+      [arch=amd64 signed-by=/etc/apt/keyrings/elastic.asc]
+      {{ elastic_repo_url }}
+      stable
+      main
+    dest: /etc/apt/sources.list.d/elastic-8.x.list
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Update elasticsearch apt packages cache
+
+- name: Force all notified handlers to run at this point
+  ansible.builtin.meta: flush_handlers
+...

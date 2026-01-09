@@ -1,0 +1,67 @@
+---
+- name: Create NetBox data directories
+  ansible.builtin.file:
+    path: '{{ item }}'
+    state: directory
+    owner: '{{ netbox_user }}'
+    group: '{{ netbox_group }}'
+    mode: '0775'
+  loop:
+    - '{{ netbox_media_dir }}'
+    - '{{ netbox_reports_dir }}'
+    - '{{ netbox_scripts_dir }}'
+    - '{{ netbox_media_dir }}/image-attachments'
+    - '{{ netbox_media_dir }}/devicetype-images'
+
+- name: Create init files
+  ansible.builtin.copy:
+    content: ''
+    dest: '{{ item }}'
+    force: false
+    owner: '{{ netbox_user }}'
+    group: '{{ netbox_group }}'
+    mode: '0664'
+  loop:
+    - '{{ netbox_reports_dir }}/__init__.py'
+    - '{{ netbox_scripts_dir }}/__init__.py'
+
+- name: Configure NetBox
+  ansible.builtin.template:
+    src: configuration.py.j2
+    dest: '{{ netbox_etc_dir }}/configuration.py'
+    lstrip_blocks: true
+    owner: '{{ netbox_user }}'
+    group: '{{ netbox_group }}'
+    mode: '0440'
+  notify: Restart netbox service
+
+- name: Create configuration symlink
+  ansible.builtin.file:
+    src: '{{ netbox_etc_dir }}/configuration.py'
+    dest: '{{ netbox_dir }}/netbox/netbox/configuration.py'
+    state: link
+  notify: Restart netbox service
+
+- name: Create NetBox virtual environment
+  ansible.builtin.command:
+    cmd: '{{ netbox_dir }}/upgrade.sh'
+    creates: '{{ netbox_dir }}/venv/bin/activate'
+  throttle: 1
+
+- name: Configure gunicorn for NetBox
+  ansible.builtin.template:
+    src: gunicorn.py.j2
+    dest: '{{ netbox_etc_dir }}/gunicorn.py'
+    lstrip_blocks: true
+    owner: '{{ netbox_user }}'
+    group: '{{ netbox_group }}'
+    mode: '0440'
+  notify: Restart netbox service
+
+- name: Create gunicorn configuration symlink
+  ansible.builtin.file:
+    src: '{{ netbox_etc_dir }}/gunicorn.py'
+    dest: '{{ netbox_dir }}/gunicorn.py'
+    state: link
+  notify: Restart netbox service
+...

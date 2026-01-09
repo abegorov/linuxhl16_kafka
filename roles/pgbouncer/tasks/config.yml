@@ -1,0 +1,37 @@
+---
+- name: Configure pgbouncer
+  ansible.builtin.template:
+    src: pgbouncer.ini
+    dest: /etc/pgbouncer/pgbouncer.ini
+    lstrip_blocks: true
+    owner: postgres
+    group: postgres
+    mode: '0640'
+  notify: Restart pgbouncer service
+
+- name: Update pgbouncer userlist
+  ansible.builtin.template:
+    src: userlist.txt
+    dest: /etc/pgbouncer/userlist.txt
+    lstrip_blocks: true
+    owner: postgres
+    group: postgres
+    mode: '0640'
+  notify: Reload pgbouncer service
+
+- name: Update pgbouncer pg_hba
+  ansible.builtin.copy:
+    content: '{{ pgbouncer_pg_hba_conf }}'
+    dest: /etc/pgbouncer/pg_hba.conf
+    owner: postgres
+    group: postgres
+    mode: '0644'
+  notify: Reload pgbouncer service
+
+- name: Enable and start pgbouncer service
+  ansible.builtin.systemd_service:
+    name: pgbouncer.service
+    enabled: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+...

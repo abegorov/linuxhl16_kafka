@@ -1,0 +1,57 @@
+---
+angie_access_logs:
+  - /var/log/angie/access.log  json_extended
+angie_kibana_ips: '{{ groups["elasticsearch"] | map("ansible.builtin.extract",
+  hostvars, "ip_address") }}'
+angie_httpd_conf_backend:
+  backend: |
+    server {
+      listen 443 default_server reuseport ssl;
+      listen [::]:443 default_server reuseport ssl;
+      http2 on;
+
+      ssl_certificate     {{ angie_web_cert.cert_path }};
+      ssl_certificate_key {{ angie_web_cert.key_path }};
+
+      client_max_body_size 25m;
+
+      location /static/ {
+        alias /opt/netbox/netbox/static/;
+      }
+
+      location / {
+        proxy_pass http://unix:/run/netbox.sock;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+      }
+    }
+  kibana: |
+    upstream kibana {
+    {% for ip in angie_kibana_ips %}
+      server {{ ip }}:5601;
+    {% endfor %}
+      hash $remote_addr consistent;
+      keepalive 16;
+    }
+
+    server {
+      listen 5601 default_server reuseport ssl;
+      listen [::]:5601 default_server reuseport ssl;
+      http2 on;
+
+      ssl_certificate     {{ angie_web_cert.cert_path }};
+      ssl_certificate_key {{ angie_web_cert.key_path }};
+
+      client_max_body_size 25m;
+
+      location / {
+        proxy_pass https://kibana;
+        proxy_connect_timeout 5000ms;
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+      }
+    }
+angie_httpd_conf: '{{ angie_httpd_conf_default |
+  ansible.builtin.combine(angie_httpd_conf_status,
+  angie_httpd_conf_backend) }}'
+...

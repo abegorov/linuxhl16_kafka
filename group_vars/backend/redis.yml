@@ -1,0 +1,42 @@
+---
+redis_password: '{{ lookup("ansible.builtin.password",
+  "secrets/redis_password.txt", length=26) }}'
+
+redis_conf_override: '{{ redis_conf_override_all |
+  ansible.builtin.combine(redis_conf_override_perhost) }}'
+redis_conf_override_perhost:
+  replicaof: '{{ hostvars["kfk-backend-01"].ip_address }} 6379'
+
+redis_conf_override_all:
+  bind: 127.0.0.1 {{ ip_address }} -::1
+  tls-auth-clients: false
+  replica-announce-ip: '{{ ip_address }}'
+  appendonly: true
+
+redis_sentinel_conf_override:
+  bind: 127.0.0.1 {{ ip_address }} -::1
+  tls-auth-clients: false
+  sentinel announce-ip: '{{ ip_address }}'
+  sentinel monitor mymaster: '{{
+    hostvars["kfk-backend-01"].ip_address }} 6379 2'
+  sentinel auth-pass mymaster: "{{ redis_password }}"
+  sentinel down-after-milliseconds mymaster: 1000
+  sentinel failover-timeout mymaster: 2000
+  masterauth: '"{{ redis_password }}"'
+  requirepass: '"{{ redis_password }}"'
+  user default: on sanitize-payload ">{{ redis_password }}" ~* &* +@all
+
+redis_sentinel_myid: '{{ lookup("ansible.builtin.password", "/dev/null",
+  length=40, chars="0123456789abcdef", seed=inventory_hostname) }}'
+redis_sentinel_replicas: |
+  {% for host in groups["backend"] | reject("eq", "kfk-backend-01") %}
+  mymaster {{ hostvars[host].ip_address }} 6379
+  {% endfor %}
+redis_sentinel_sentinels: |
+  {% for host in groups["backend"] | reject("eq", inventory_hostname) %}
+  {% set hostvar = hostvars[host] %}
+  mymaster {{ hostvar.ip_address }} 26379 {{ hostvar.redis_sentinel_myid }}
+  {% endfor %}
+
+redis_sentinel_tuple: ('{{ ip_address }}', 26379)
+...

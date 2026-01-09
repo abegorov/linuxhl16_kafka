@@ -1,0 +1,56 @@
+---
+logstash_filebeat_ca: /etc/logstash/certs/filebeat_ca.crt
+logstash_filebeat_host: '{{ ip_address }}:5044'
+logstash_add_certs:
+  - ca_path: '{{ logstash_filebeat_ca }}'
+    ca_content: '{{ lookup("ansible.builtin.file", filebeat_ca_cert_path) }}'
+logstash_jvm_options: |
+  -Xms512m
+  -Xmx512m
+  11-13:-XX:+UseConcMarkSweepGC
+  11-13:-XX:CMSInitiatingOccupancyFraction=75
+  11-13:-XX:+UseCMSInitiatingOccupancyOnly
+  -Djava.awt.headless=true
+  -Dfile.encoding=UTF-8
+  -Djruby.compile.invokedynamic=true
+  -XX:+HeapDumpOnOutOfMemoryError
+  -Djava.security.egd=file:/dev/urandom
+  -Dlog4j2.isThreadContextMapInheritable=true
+logstash_config_override:
+  api.enabled: false
+logstash_confd:
+  beats: |
+    input {
+      beats {
+        host => "{{ ip_address }}"
+        port => 5044
+        ssl_enabled => true
+        ssl_key => "{{ logstash_cert.key_path }}"
+        ssl_certificate => "{{ logstash_cert.cert_path }}"
+        ssl_certificate_authorities => ["{{ logstash_filebeat_ca }}"]
+        ssl_client_authentication => "required"
+      }
+    }
+    filter {
+      if ![event][module] {
+        mutate {
+          add_field => { "[event][module]" => "unknown" }
+        }
+      }
+    }
+    output {
+      elasticsearch {
+        hosts => [
+    {% for host in groups["elasticsearch"] %}
+          "{{ hostvars[host].elasticsearch_url }}"{{
+          '' if loop.last else ',' }}
+    {% endfor %}
+        ]
+        index => "%{[@metadata][beat]}-%{[event][module]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
+        user => "elastic"
+        password => "{{ elasticsearch_elastic_password }}"
+        ssl_certificate_authorities => "{{
+          logstash_elasticsearch_cert.ca_path }}"
+      }
+    }
+...

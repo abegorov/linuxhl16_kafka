@@ -1,0 +1,6 @@
+{% if elasticsearch_role_mapping %}
+{{
+  elasticsearch_role_mapping | to_nice_yaml(indent=2, sort_keys=False,
+  explicit_start=True, explicit_end=True)
+}}
+{% endif %}

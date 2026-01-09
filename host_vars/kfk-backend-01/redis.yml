@@ -1,0 +1,4 @@
+---
+redis_conf_override_perhost:
+  replicaof:
+...

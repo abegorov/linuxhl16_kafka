@@ -1,0 +1,26 @@
+---
+- name: Update DH Parameters
+  ansible.builtin.copy:
+    content: '{{ redis_dhparam }}'
+    dest: /etc/redis/dhparam
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Configure redis
+  ansible.builtin.template:
+    src: redis.conf
+    dest: /etc/redis/redis.conf
+    lstrip_blocks: true
+    owner: redis
+    group: redis
+    mode: '0640'
+  notify: Restart redis-server service
+
+- name: Enable and start redis-server service
+  ansible.builtin.systemd_service:
+    name: redis-server.service
+    enabled: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+...

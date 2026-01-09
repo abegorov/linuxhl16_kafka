@@ -1,0 +1,13 @@
+---
+patroni_db_list: []
+patroni_db_comment: '{{ omit }}'
+patroni_db_conn_limit: '{{ omit }}'
+patroni_db_encoding: '{{ omit }}'
+patroni_db_icu_locale: '{{ omit }}'
+patroni_db_lc_collate: '{{ omit }}'
+patroni_db_lc_ctype: '{{ omit }}'
+patroni_db_locale_provider: '{{ omit }}'
+patroni_db_owner: '{{ omit }}'
+patroni_db_tablespace: '{{ omit }}'
+patroni_db_template: '{{ omit }}'
+...

@@ -1,0 +1,70 @@
+---
+- name: Update passwords
+  ansible.builtin.include_tasks: passwd.yml
+  loop: '{{ angie_passwd |
+    ansible.builtin.dict2items(key_name="name", value_name="records") }}'
+  loop_control:
+    loop_var: passwd
+  no_log: '{{ not debug }}'
+
+- name: Update DH Parameters
+  ansible.builtin.copy:
+    content: '{{ angie_dhparam }}'
+    dest: /etc/angie/dhparam
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Configure angie
+  ansible.builtin.copy:
+    content: '{{ angie_conf }}'
+    dest: /etc/angie/angie.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload angie service
+
+- name: Configure angie modules
+  ansible.builtin.copy:
+    content: |
+      {% for module in angie_load_modules %}
+      load_module /etc/angie/modules/{{ module }}.so;
+      {% endfor %}
+    dest: /etc/angie/load_module.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload angie service
+
+- name: Configure angie http module
+  ansible.builtin.copy:
+    content: '{{ item.value }}'
+    dest: /etc/angie/http.d/{{ item.key }}.conf
+    owner: root
+    group: root
+    mode: '0644'
+  loop: '{{ angie_httpd_conf | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+  notify: Reload angie service
+
+- name: Configure angie stream module
+  ansible.builtin.copy:
+    content: '{{ item.value }}'
+    dest: /etc/angie/stream.d/{{ item.key }}.conf
+    owner: root
+    group: root
+    mode: '0644'
+  loop: '{{ angie_streamd_conf | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+  notify: Reload angie service
+
+- name: Configure autostart for angie service
+  ansible.builtin.systemd_service:
+    name: angie.service
+    enabled: '{{ angie_autostart }}'
+    state: '{{ "started" if angie_autostart else omit }}'
+  register: _angie_service
+  ignore_errors: '{{ ansible_check_mode }}'
+...

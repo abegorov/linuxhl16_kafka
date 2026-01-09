@@ -1,0 +1,8 @@
+---
+redis_repo_signing_key: https://packages.redis.io/gpg
+redis_repo_signing_key_path: /usr/share/keyrings/redis-archive-keyring.asc
+redis_repo_signing_key_checksum:
+  sha256:817b5a78358d00ed6b71884d70ad5d2eab9934badca1a34299fdc6a2e4a8ad20.
+
+redis_repo_mirror: https://packages.redis.io/deb
+...

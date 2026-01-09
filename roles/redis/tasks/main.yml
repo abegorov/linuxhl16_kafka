@@ -1,0 +1,26 @@
+---
+- name: Import install tasks
+  ansible.builtin.import_tasks: install.yml
+  tags: [redis, redis_install]
+
+- name: Import certs tasks
+  ansible.builtin.import_role:
+    name: tls_copy
+    public: false
+  vars:
+    tls_copy_dir_owner: redis
+    tls_copy_dir_group: redis
+    tls_copy_dir_mode: '02770'
+    tls_copy_certs: ['{{ redis_cert }}']
+    tls_copy_key_owner: redis
+    tls_copy_notify: Restart redis-server service
+  tags: [redis, redis_certs]
+
+- name: Configure redis
+  ansible.builtin.import_tasks: config.yml
+  tags: [redis, redis_config]
+
+- name: Force all notified handlers to run
+  ansible.builtin.meta: flush_handlers
+  tags: [redis, redis_certs, redis_config]
+...

@@ -1,0 +1,80 @@
+---
+- name: Update jvm settings
+  ansible.builtin.template:
+    src: jvm.options.j2
+    dest: '{{ elasticsearch_jvm_options_file }}'
+    owner: root
+    group: elasticsearch
+    mode: '0660'
+  notify: Restart elasticsearch service
+
+- name: Check elasticsearch database exists
+  ansible.builtin.stat:
+    path: /var/lib/elasticsearch/snapshot_cache
+  check_mode: false
+  register: _elasticsearch_snapshot_cache
+
+- name: Update elasticsearch settings
+  vars:
+    elasticsearch_filter_config: '{{
+      _elasticsearch_snapshot_cache.stat.exists }}'
+  ansible.builtin.template:
+    src: elasticsearch.yml.j2
+    dest: /etc/elasticsearch/elasticsearch.yml
+    owner: root
+    group: elasticsearch
+    mode: '0660'
+  notify: Restart elasticsearch service
+
+- name: Update elasticsearch role mapping
+  ansible.builtin.template:
+    src: role_mapping.yml.j2
+    dest: /etc/elasticsearch/role_mapping.yml
+    owner: root
+    group: elasticsearch
+    mode: '0660'
+  notify: Restart elasticsearch service
+
+- name: Update elasticsearch roles
+  ansible.builtin.template:
+    src: roles.yml.j2
+    dest: /etc/elasticsearch/roles.yml
+    owner: root
+    group: elasticsearch
+    mode: '0660'
+  notify: Restart elasticsearch service
+
+- name: Update elasticsearch users
+  ansible.builtin.copy:
+    content: '{{ elasticsearch_users }}'
+    dest: /etc/elasticsearch/users
+    owner: root
+    group: elasticsearch
+    mode: '0660'
+  notify: Restart elasticsearch service
+
+- name: Update elasticsearch users roles
+  ansible.builtin.copy:
+    content: '{{ elasticsearch_users_roles }}'
+    dest: /etc/elasticsearch/users_roles
+    owner: root
+    group: elasticsearch
+    mode: '0660'
+  notify: Restart elasticsearch service
+
+- name: Enable and start elasticsearch service
+  ansible.builtin.systemd_service:
+    name: elasticsearch.service
+    enabled: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+
+- name: Update elasticsearch settings
+  ansible.builtin.template:
+    src: elasticsearch.yml.j2
+    dest: /etc/elasticsearch/elasticsearch.yml
+    owner: root
+    group: elasticsearch
+    mode: '0660'
+  notify: Restart elasticsearch service
+...

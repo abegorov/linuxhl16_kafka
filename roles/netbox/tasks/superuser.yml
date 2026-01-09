@@ -1,0 +1,30 @@
+---
+- name: Check if superuser present
+  community.postgresql.postgresql_query:
+    login_db: '{{ netbox_db }}'
+    login_host: '{{ netbox_db_host }}'
+    login_port: '{{ netbox_db_port }}'
+    login_user: '{{ netbox_db_user }}'
+    login_password: '{{ netbox_db_password }}'
+    ca_cert: '{{ netbox_pgsql_cert.ca_path }}'
+    ssl_cert: '{{ netbox_pgsql_cert.cert_path }}'
+    ssl_key: '{{ netbox_pgsql_cert.key_path }}'
+    ssl_mode: verify-full
+    query: SELECT id FROM users_user WHERE username = %s
+    positional_args: ['{{ netbox_superuser }}']
+  register: _netbox_superuser_id
+  tags: [netbox, netbox_superuser]
+
+- name: Create superuser if not exists
+  environment:
+    DJANGO_SUPERUSER_USERNAME: '{{ netbox_superuser }}'
+    DJANGO_SUPERUSER_EMAIL: '{{ netbox_superuser_email }}'
+    DJANGO_SUPERUSER_PASSWORD: '{{ netbox_superuser_password }}'
+  community.general.django_manage:
+    command: createsuperuser --noinput
+    project_path: '{{ netbox_dir }}/netbox'
+    virtualenv: '{{ netbox_dir }}/venv'
+  when: _netbox_superuser_id.rowcount == 0
+  retries: 3
+  tags: [netbox, netbox_superuser]
+...

@@ -1,0 +1,8 @@
+---
+- name: Restart service etcd
+  ansible.builtin.systemd_service:
+    name: etcd.service
+    state: restarted
+  throttle: 1
+  ignore_errors: '{{ ansible_check_mode }}'
+...

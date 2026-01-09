@@ -1,0 +1,18 @@
+---
+- name: Configure redis-sentinel
+  ansible.builtin.template:
+    src: sentinel.conf
+    dest: /etc/redis/sentinel.conf
+    lstrip_blocks: true
+    owner: redis
+    group: redis
+    mode: '0640'
+  notify: Restart redis-sentinel service
+
+- name: Enable and start redis-sentinel service
+  ansible.builtin.systemd_service:
+    name: redis-sentinel.service
+    enabled: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+...

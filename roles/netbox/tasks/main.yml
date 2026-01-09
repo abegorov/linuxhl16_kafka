@@ -1,0 +1,34 @@
+---
+- name: Import install tasks
+  ansible.builtin.import_tasks: install.yml
+  tags: [netbox, netbox_install]
+
+- name: Import certs tasks
+  ansible.builtin.import_role:
+    name: tls_copy
+    public: false
+  vars:
+    tls_copy_certs:
+      - '{{ netbox_pgsql_cert }}'
+      - '{{ netbox_redis_cert }}'
+    tls_copy_key_owner: '{{ netbox_user }}'
+  tags: [netbox, netbox_certs]
+
+- name: Import config tasks
+  ansible.builtin.import_tasks: config.yml
+  tags: [netbox, netbox_config]
+
+- name: Include superuser tasks
+  ansible.builtin.include_tasks: superuser.yml
+  loop: '{{ ansible_play_batch }}'
+  when: item == inventory_hostname
+  tags: [netbox, netbox_superuser]
+
+- name: Import service tasks
+  ansible.builtin.import_tasks: service.yml
+  tags: [netbox, netbox_service]
+
+- name: Force all notified handlers to run
+  ansible.builtin.meta: flush_handlers
+  tags: [netbox, netbox_config, netbox_service]
+...

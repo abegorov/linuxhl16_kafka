@@ -1,0 +1,23 @@
+---
+- name: Install angie
+  ansible.builtin.import_tasks: install.yml
+  tags: [angie, angie_install]
+
+- name: Import certs tasks
+  ansible.builtin.import_role:
+    name: tls_copy
+    public: false
+  vars:
+    tls_copy_certs: '{{ angie_certs }}'
+    tls_copy_key_owner: angie
+    tls_copy_notify: Reload angie service
+  tags: [angie, angie_certs]
+
+- name: Configure angie
+  ansible.builtin.import_tasks: config.yml
+  tags: [angie, angie_config]
+
+- name: Force all notified handlers to run
+  ansible.builtin.meta: flush_handlers
+  tags: [angie, angie_certs, angie_config]
+...

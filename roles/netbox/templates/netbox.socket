@@ -1,0 +1,12 @@
+[Unit]
+Description=NetBox WSGI Socket
+Documentation=https://docs.netbox.dev/
+
+[Socket]
+ListenStream={{ netbox_socket }}
+SocketUser={{ netbox_socket_user }}
+SocketGroup={{ netbox_socket_group }}
+SocketMode=0660
+
+[Install]
+WantedBy=sockets.target

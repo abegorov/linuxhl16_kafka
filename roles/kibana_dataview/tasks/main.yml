@@ -1,0 +1,25 @@
+---
+- name: Update kibana dataviews
+  ansible.builtin.uri:
+    url: '{{ kibana_dataview_url }}/api/data_views/data_view'
+    url_username: '{{ kibana_dataview_username }}'
+    url_password: '{{ kibana_dataview_password }}'
+    force_basic_auth: true
+    ca_path: '{{ kibana_dataview_ca_path }}'
+    validate_certs: '{{ kibana_dataview_validate_certs }}'
+    headers:
+      kbn-xsrf: string
+    method: POST
+    body_format: json
+    body:
+      data_view:
+        name: '{{ item.key }}'
+        title: '{{ item.value }}'
+        allowNoIndex: true
+      override: true
+  throttle: 1
+  loop: '{{ kibana_dataview_create | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+  tags: [kibana_dataview]
+...

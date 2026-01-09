@@ -1,0 +1,26 @@
+---
+elasticsearch_jvm_options: |
+  -Xms512m
+  -Xmx512m
+
+elasticsearch_url: https://{{ ip_address }}:9200
+
+elasticsearch_config_override:
+  network.host: '{{ ip_address }}'
+  http.host:
+    - _local_
+    - '{{ ip_address }}'
+  transport.host: '{{ ip_address }}'
+  cluster.name: abegorov-elasticsearch-cluster
+  node.name: '{{ inventory_hostname }}'
+  discovery.seed_hosts: '{{ groups["elasticsearch"] |
+    map("ansible.builtin.extract", hostvars, "ip_address") }}'
+  cluster.initial_master_nodes: '{{ groups["elasticsearch"] |
+    map("ansible.builtin.extract", hostvars, "ip_address") }}'
+
+elasticsearch_update_passwords: false
+elasticsearch_elastic_password: '{{ lookup("ansible.builtin.password",
+  "secrets/elasticsearch_elastic_password.txt", length=26) }}'
+elasticsearch_kibana_password: '{{ lookup("ansible.builtin.password",
+  "secrets/elasticsearch_kibana_password.txt", length=26) }}'
+...

@@ -1,0 +1,18 @@
+---
+system_groups_list:
+  - name: '{{ etcd_group }}'
+  - name: '{{ netbox_group }}'
+    gid: '{{ netbox_gid }}'
+system_users_list:
+  - name: '{{ etcd_user }}'
+    password: 'x'
+    group: '{{ etcd_group }}'
+    comment: etcd key-value store
+    home: '{{ etcd_data }}'
+  - name: '{{ netbox_user }}'
+    password: 'x'
+    uid: '{{ netbox_uid }}'
+    group: '{{ netbox_group }}'
+    comment: NetBox IP Address Management
+    home: '{{ netbox_var_dir }}'
+...

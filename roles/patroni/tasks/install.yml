@@ -1,0 +1,21 @@
+---
+- name: Disable automatic cluster creation
+  community.general.ini_file:
+    path: /etc/postgresql-common/createcluster.conf
+    option: create_main_cluster
+    value: 'false'
+    no_extra_spaces: false
+    create: false
+
+- name: Install patroni and requirements
+  ansible.builtin.apt:
+    name:
+      - patroni
+      - postgresql-{{ patroni_pgsql_version }}
+      - acl
+    update_cache: true
+    cache_valid_time: 3600
+    state: present
+  retries: 10
+  delay: 10
+...
