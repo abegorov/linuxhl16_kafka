@@ -4,6 +4,17 @@ logstash_filebeat_host: '{{ ip_address }}:5044'
 logstash_add_certs:
   - ca_path: '{{ logstash_filebeat_ca }}'
     ca_content: '{{ lookup("ansible.builtin.file", filebeat_ca_cert_path) }}'
+
+logstash_keystore_path: /etc/logstash/certs/keystore.p12
+logstash_keystore_password: '{{ lookup("ansible.builtin.password",
+  "secrets/logstash_keystore_password.txt", length=26) }}'
+
+logstash_truststore_path: /etc/logstash/certs/truststore.jks
+logstash_truststore_certificates:
+  kafka: '{{ lookup("ansible.builtin.file", kafka_ca_cert_path) }}'
+logstash_truststore_password: '{{ lookup("ansible.builtin.password",
+  "secrets/logstash_truststore_password.txt", length=26) }}'
+
 logstash_jvm_options: |
   -Xms512m
   -Xmx512m
@@ -21,14 +32,32 @@ logstash_config_override:
 logstash_confd:
   beats: |
     input {
-      beats {
-        host => "{{ ip_address }}"
-        port => 5044
-        ssl_enabled => true
-        ssl_key => "{{ logstash_cert.key_path }}"
-        ssl_certificate => "{{ logstash_cert.cert_path }}"
-        ssl_certificate_authorities => ["{{ logstash_filebeat_ca }}"]
-        ssl_client_authentication => "required"
+      kafka {
+        bootstrap_servers => "{{ groups["elasticsearch"] |
+          map("ansible.builtin.extract", hostvars, "kafka_broker_socket") |
+          join(",") }}"
+        topics => [
+          "system",
+          "kafka",
+          "elasticsearch",
+          "kibana",
+          "logstash",
+          "haproxy",
+          "nginx",
+          "postgresql",
+          "redis"
+        ]
+        auto_offset_reset => "earliest"
+        codec => "json"
+        client_id => "{{ inventory_hostname }}"
+        group_id => "logstash"
+        security_protocol => "SSL"
+        ssl_keystore_location => "{{ logstash_keystore_path }}"
+        ssl_keystore_password => "{{ logstash_keystore_password }}"
+        ssl_keystore_type => "PKCS12"
+        ssl_truststore_location => "{{ logstash_truststore_path }}"
+        ssl_truststore_password => "{{ logstash_truststore_password }}"
+        ssl_truststore_type => "jks"
       }
     }
     filter {

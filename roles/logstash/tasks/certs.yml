@@ -1,0 +1,54 @@
+---
+- name: Import certs role
+  ansible.builtin.import_role:
+    name: tls_copy
+    public: false
+  vars:
+    tls_copy_certs: '{{ [logstash_cert] +
+      [logstash_elasticsearch_cert] + logstash_add_certs }}'
+    tls_copy_dir_owner: root
+    tls_copy_dir_group: logstash
+    tls_copy_dir_mode: '0750'
+    tls_copy_cert_owner: root
+    tls_copy_cert_group: logstash
+    tls_copy_cert_mode: '0640'
+    tls_copy_key_format: pkcs8
+    tls_copy_key_owner: root
+    tls_copy_key_group: logstash
+    tls_copy_key_mode: '0640'
+    tls_copy_notify: Restart logstash service
+  tags: [logstash, logstash_certs]
+
+- name: Update logstash keystore
+  community.general.java_keystore:
+    name: '{{ logstash_keystore_name }}'
+    certificate: '{{ logstash_keystore_certificate }}'
+    private_key: '{{ logstash_keystore_private_key }}'
+    password: '{{ logstash_keystore_password }}'
+    keystore_type: '{{ logstash_keystore_type }}'
+    dest: '{{ logstash_keystore_path }}'
+    owner: root
+    group: logstash
+    mode: '0640'
+  when:
+    - logstash_keystore_certificate | length > 0
+    - logstash_keystore_private_key | length > 0
+  notify: Restart logstash service
+
+- name: Update logstash truststore
+  community.general.java_cert:
+    cert_alias: '{{ item.key }}'
+    cert_content: '{{ item.value }}'
+    keystore_path: '{{ logstash_truststore_path }}'
+    keystore_pass: '{{ logstash_truststore_password }}'
+    keystore_create: true
+    state: present
+    trust_cacert: true
+    owner: root
+    group: root
+    mode: '0644'
+  loop: '{{ logstash_truststore_certificates | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+  notify: Restart logstash service
+...

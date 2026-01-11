@@ -7,6 +7,20 @@ logstash_cert:
   cert_content: '{{ lookup("ansible.builtin.file", logstash_cert_path) }}'
   key_content: '{{ lookup("ansible.builtin.file", logstash_key_path) }}'
 
+logstash_keystore_path: /etc/logstash/certs/keystore.p12
+logstash_keystore_name: logstash
+logstash_keystore_certificate: '{{ lookup("ansible.builtin.file",
+  logstash_cert_path) }}'
+logstash_keystore_private_key: '{{ lookup("ansible.builtin.file",
+  logstash_key_path) }}'
+logstash_keystore_type: pkcs12
+logstash_keystore_password: changeit
+
+logstash_truststore_path: /etc/logstash/certs/truststore.jks
+logstash_truststore_certificates:
+  logstash: '{{ lookup("ansible.builtin.file", logstash_ca_cert_path) }}'
+logstash_truststore_password: changeit
+
 logstash_elasticsearch_cert:
   ca_path: /etc/logstash/certs/elasticsearch_ca.crt
   ca_content: '{{ lookup("ansible.builtin.file", elasticsearch_ca_cert_path) }}'

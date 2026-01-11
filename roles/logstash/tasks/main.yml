@@ -4,23 +4,7 @@
   tags: [logstash, logstash_install]
 
 - name: Import certs tasks
-  ansible.builtin.import_role:
-    name: tls_copy
-    public: false
-  vars:
-    tls_copy_certs: '{{ [logstash_cert] +
-      [logstash_elasticsearch_cert] + logstash_add_certs }}'
-    tls_copy_dir_owner: root
-    tls_copy_dir_group: logstash
-    tls_copy_dir_mode: '0750'
-    tls_copy_cert_owner: root
-    tls_copy_cert_group: logstash
-    tls_copy_cert_mode: '0640'
-    tls_copy_key_format: pkcs8
-    tls_copy_key_owner: root
-    tls_copy_key_group: logstash
-    tls_copy_key_mode: '0640'
-    tls_copy_notify: Restart logstash service
+  ansible.builtin.import_tasks: certs.yml
   tags: [logstash, logstash_certs]
 
 - name: Configure logstash
