@@ -34,11 +34,12 @@
 - **bach_completion** - устанавливает пакет **bash-completion**.
 - **chrony** - устанавливает **chrony** для синхронизации времени между узлами.
 - **elastic_repo** - настраивает репозиторий для **elasticsearch**, **kibana** и **logstash** (используется [mirror.yandex.ru/mirrors/elastic/8](https://mirror.yandex.ru/mirrors/elastic/8))/
-- **elasticsearch** - устанавливает и настраивает **elasticsearch**/
+- **elasticsearch** - устанавливает и настраивает **elasticsearch**.
 - **etcd** - устанавливает и настраивает кластер **etcd** для его дальнейшего использования **patroni**.
 - **filebeat** - устанавливает и настраивает **filebeat**.
 - **haproxy** - устанавливает и настраивает **haproxy** для проксирования запросов к **redis** и **postgresql**.
 - **hosts** - прописывает адреса всех узлов в `/etc/hosts`.
+- **kafka** - устанавливает и настраивает кластер **kafka**.
 - **keepalived** - устанавливает и настраивает **keepalived** при разворачивании в **vagrant**.
 - **kibana** - устанавливает и настраивает **kibana**.
 - **kibana_dataview** - добавляет указанные **Data views** в индексы **kibana** в **elasticsearch**.
@@ -81,13 +82,17 @@
 - [group_vars/elasticsearch/certs.yml](group_vars/elasticsearch/certs.yml) - настройки генерации сертификатов для **elasticsearch**;
 - [group_vars/elasticsearch/elasticsearch.yml](group_vars/elasticsearch/elasticsearch.yml) - настройки для **elasticsearch**;
 - [group_vars/elasticsearch/filebeat.yml](group_vars/elasticsearch/filebeat.yml) - настройки для **filebeat** для **elasticsearch**;
+- [group_vars/elasticsearch/kafka.yml](group_vars/elasticsearch/kafka.yml) - настройки для **kafka** для **elasticsearch**;
 - [group_vars/elasticsearch/kibana.yml](group_vars/elasticsearch/kibana.yml) - настройки для **kibana** для **elasticsearch**;
 - [group_vars/elasticsearch/logstash.yml](group_vars/elasticsearch/logstash.yml) - настройки для **logstash** для **elasticsearch**;
 - [host_vars/kfk-backend-01/redis.yml](host_vars/kfk-backend-01/redis.yml) - настройки **redis** для **kfk-backend-01**;
 - [host_vars/kfk-backend-01/keepalived.yml](host_vars/kfk-backend-01/keepalived.yml) - настройки **keepalived** для **kfk-backend-01**;
 - [host_vars/kfk-backend-02/keepalived.yml](host_vars/kfk-backend-02/keepalived.yml) - настройки **keepalived** для **kfk-backend-02**;
 - [host_vars/kfk-backend-03/keepalived.yml](host_vars/kfk-backend-03/keepalived.yml) - настройки **keepalived** для **kfk-backend-03**;
-- [host_vars/kfk-es-01/elasticsearch.yml](host_vars/kfk-es-01/elasticsearch.yml) - настройки **elasticsearch** для **kfk-backend-01** (позволяет установить пароль кластера только на этом узле).
+- [host_vars/kfk-es-01/elasticsearch.yml](host_vars/kfk-es-01/elasticsearch.yml) - настройки **elasticsearch** для **kfk-es-01** (позволяет установить пароль кластера только на этом узле).
+- [host_vars/kfk-es-01/kafka.yml](host_vars/kfk-es-01/kafka.yml) - настройки **kafka** для **kfk-es-01** (node_id).
+- [host_vars/kfk-es-02/kafka.yml](host_vars/kfk-es-02/kafka.yml) - настройки **kafka** для **kfk-es-02** (node_id).
+- [host_vars/kfk-es-03/kafka.yml](host_vars/kfk-es-03/kafka.yml) - настройки **kafka** для **kfk-es-03** (node_id).
 
 ## Запуск
 
@@ -129,23 +134,166 @@ rm vagrant.box
 
 Однако **keepalived** настроен таким образом, что при недоступности одного из узлов, его адрес переезжает на один из доступных.
 
-Для начала проверим, что **kibana** и **backend** поднялись для этого перейдём на порты **443**, **5601** и **9443** балансировщика.
+Для начала проверим состояние кластера **kafka**:
 
-![netbox](images/netbox.png)
-![kibana](images/kibana.png)
-![vts](images/vts.png)
+```text
+root@kfk-es-01:/opt/kafka/4.1.1/bin# ./kafka-metadata-quorum.sh --bootstrap-server 192.168.56.31:9092 --command-config /etc/kafka/server.properties describe --status
+ClusterId:              d3hmci7YQre-MuRF8qOF8w
+LeaderId:               1
+LeaderEpoch:            4
+HighWatermark:          10528
+MaxFollowerLag:         0
+MaxFollowerLagTimeMs:   0
+CurrentVoters:          [{"id": 1, "endpoints": ["CONTROLLER://192.168.56.31:9093"]}, {"id": 2, "endpoints": ["CONTROLLER://192.168.56.32:9093"]}, {"id": 3, "endpoints": ["CONTROLLER://192.168.56.33:9093"]}]
+CurrentObservers:       []
+root@kfk-es-01:/opt/kafka/4.1.1/bin# ./kafka-metadata-quorum.sh --bootstrap-server 192.168.56.31:9092 --command-config /etc/kafka/server.properties describe --replication --human-readable
+NodeId  DirectoryId             LogEndOffset    Lag     LastFetchTimestamp      LastCaughtUpTimestamp   Status
+1       AAAAAAAAAAAAAAAAAAAAAA  10721           0       10 ms ago               18 ms ago               Leader
+2       AAAAAAAAAAAAAAAAAAAAAA  10721           0       427 ms ago              427 ms ago              Follower
+3       AAAAAAAAAAAAAAAAAAAAAA  10721           0       430 ms ago              430 ms ago              Follower
+```
 
-Конвейер сбора логов представляет из себя **Filebeat** -> **Logstash** -> **ElasticSearch**. Каждое приложение пришет в свой индекс, поэтому если индексы были созданы, то настройка прошла успешно. Зайдём в **Kibana** -> **Stack Management** -> **Data** -> **index Management** (пароль пользователя **elastic** генерится автоматически и доступен в файл [secrets/elasticsearch_elastic_password.txt](secrets/elasticsearch_elastic_password.txt)) и проверим, что все индексы были созданы. Видно, что создалось 8 индексов, все в статусе **green** и у каждого есть одна реплика:
+Проверим создались ли топики:
 
-![vts](images/indexes.png)
+```text
+root@kfk-es-01:/opt/kafka/4.1.1/bin# ./kafka-topics.sh --bootstrap-server 192.168.56.31:9092 --command-config /etc/kafka/server.properties --describe
+Topic: logstash TopicId: 1LzxbCPgQrmtTbgLJ5HnbA PartitionCount: 3       ReplicationFactor: 3    Configs: min.insync.replicas=1,segment.bytes=1073741824
+        Topic: logstash Partition: 0    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: logstash Partition: 1    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: logstash Partition: 2    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+Topic: system   TopicId: dKYeXK1UQ2u5yMuPOZwu1w PartitionCount: 3       ReplicationFactor: 3    Configs: min.insync.replicas=1,segment.bytes=1073741824
+        Topic: system   Partition: 0    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: system   Partition: 1    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: system   Partition: 2    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+Topic: elasticsearch    TopicId: vWAWHz4pSMasV5vHO8BgWg PartitionCount: 3       ReplicationFactor: 3    Configs: min.insync.replicas=1,segment.bytes=1073741824
+        Topic: elasticsearch    Partition: 0    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: elasticsearch    Partition: 1    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: elasticsearch    Partition: 2    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+Topic: nginx    TopicId: 7gGHZSKoTXCJC7C_BYVI_Q PartitionCount: 3       ReplicationFactor: 3    Configs: min.insync.replicas=1,segment.bytes=1073741824
+        Topic: nginx    Partition: 0    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: nginx    Partition: 1    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: nginx    Partition: 2    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+Topic: postgresql       TopicId: tqCNQrEtReGKs1Oi3e9UuA PartitionCount: 3       ReplicationFactor: 3    Configs: min.insync.replicas=1,segment.bytes=1073741824
+        Topic: postgresql       Partition: 0    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: postgresql       Partition: 1    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: postgresql       Partition: 2    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+Topic: kafka    TopicId: jiW_W-Y9Qmurup2mWjkwdg PartitionCount: 3       ReplicationFactor: 3    Configs: min.insync.replicas=1,segment.bytes=1073741824
+        Topic: kafka    Partition: 0    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: kafka    Partition: 1    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: kafka    Partition: 2    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+Topic: haproxy  TopicId: 6LBr4f2gQz-bRFrH-hArAA PartitionCount: 3       ReplicationFactor: 3    Configs: min.insync.replicas=1,segment.bytes=1073741824
+        Topic: haproxy  Partition: 0    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: haproxy  Partition: 1    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: haproxy  Partition: 2    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+Topic: kibana   TopicId: fp6FQw82SWezWQJ5C8TKJQ PartitionCount: 3       ReplicationFactor: 3    Configs: min.insync.replicas=1,segment.bytes=1073741824
+        Topic: kibana   Partition: 0    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: kibana   Partition: 1    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: kibana   Partition: 2    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+Topic: __consumer_offsets       TopicId: tYX8PH3yTZWS5wqajpCZFQ PartitionCount: 50      ReplicationFactor: 3    Configs: compression.type=producer,min.insync.replicas=1,cleanup.policy=compact,segment.bytes=104857600
+        Topic: __consumer_offsets       Partition: 0    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 1    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 2    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 3    Leader: 2       Replicas: 2,1,3 Isr: 2,1,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 4    Leader: 1       Replicas: 1,3,2 Isr: 1,3,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 5    Leader: 3       Replicas: 3,2,1 Isr: 3,2,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 6    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 7    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 8    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 9    Leader: 1       Replicas: 1,3,2 Isr: 1,3,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 10   Leader: 3       Replicas: 3,2,1 Isr: 3,2,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 11   Leader: 2       Replicas: 2,1,3 Isr: 2,1,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 12   Leader: 3       Replicas: 3,2,1 Isr: 3,2,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 13   Leader: 2       Replicas: 2,1,3 Isr: 2,1,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 14   Leader: 1       Replicas: 1,3,2 Isr: 1,3,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 15   Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 16   Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 17   Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 18   Leader: 3       Replicas: 3,2,1 Isr: 3,2,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 19   Leader: 2       Replicas: 2,1,3 Isr: 2,1,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 20   Leader: 1       Replicas: 1,3,2 Isr: 1,3,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 21   Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 22   Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 23   Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 24   Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 25   Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 26   Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 27   Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 28   Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 29   Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 30   Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 31   Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 32   Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 33   Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 34   Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 35   Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 36   Leader: 1       Replicas: 1,3,2 Isr: 1,3,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 37   Leader: 3       Replicas: 3,2,1 Isr: 3,2,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 38   Leader: 2       Replicas: 2,1,3 Isr: 2,1,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 39   Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 40   Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 41   Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 42   Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 43   Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 44   Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 45   Leader: 2       Replicas: 2,1,3 Isr: 2,1,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 46   Leader: 1       Replicas: 1,3,2 Isr: 1,3,2      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 47   Leader: 3       Replicas: 3,2,1 Isr: 3,2,1      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 48   Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: __consumer_offsets       Partition: 49   Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+Topic: redis    TopicId: 9CZ3t0hiQqGSfJRjy_ki6w PartitionCount: 3       ReplicationFactor: 3    Configs: min.insync.replicas=1,segment.bytes=1073741824
+        Topic: redis    Partition: 0    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3      Elr:    LastKnownElr:
+        Topic: redis    Partition: 1    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1      Elr:    LastKnownElr:
+        Topic: redis    Partition: 2    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2      Elr:    LastKnownElr:
+```
+
+Проверим состояние групп:
+
+```text
+root@kfk-es-01:/opt/kafka/4.1.1/bin# ./kafka-consumer-groups.sh --bootstrap-server 192.168.56.31:9092 --command-config /etc/kafka/server.properties --describe --all-groups
+
+GROUP           TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                      HOST            CLIENT-ID
+logstash        logstash        1          554             554             0               kfk-es-02-0-825704f1-ae42-49a9-946e-5337d52b90a5 /192.168.56.32  kfk-es-02-0
+logstash        system          1          14590           14590           0               kfk-es-02-0-825704f1-ae42-49a9-946e-5337d52b90a5 /192.168.56.32  kfk-es-02-0
+logstash        postgresql      1          1184            1184            0               kfk-es-02-0-825704f1-ae42-49a9-946e-5337d52b90a5 /192.168.56.32  kfk-es-02-0
+logstash        nginx           1          21              21              0               kfk-es-02-0-825704f1-ae42-49a9-946e-5337d52b90a5 /192.168.56.32  kfk-es-02-0
+logstash        elasticsearch   1          2391            2391            0               kfk-es-02-0-825704f1-ae42-49a9-946e-5337d52b90a5 /192.168.56.32  kfk-es-02-0
+logstash        kafka           1          1260            1260            0               kfk-es-02-0-825704f1-ae42-49a9-946e-5337d52b90a5 /192.168.56.32  kfk-es-02-0
+logstash        haproxy         1          101             101             0               kfk-es-02-0-825704f1-ae42-49a9-946e-5337d52b90a5 /192.168.56.32  kfk-es-02-0
+logstash        kibana          1          239             239             0               kfk-es-02-0-825704f1-ae42-49a9-946e-5337d52b90a5 /192.168.56.32  kfk-es-02-0
+logstash        redis           1          230             230             0               kfk-es-02-0-825704f1-ae42-49a9-946e-5337d52b90a5 /192.168.56.32  kfk-es-02-0
+logstash        logstash        2          543             543             0               kfk-es-03-0-04014fb1-1641-4424-9fb4-fe0c56429b95 /192.168.56.33  kfk-es-03-0
+logstash        system          2          14755           14755           0               kfk-es-03-0-04014fb1-1641-4424-9fb4-fe0c56429b95 /192.168.56.33  kfk-es-03-0
+logstash        kibana          2          239             239             0               kfk-es-03-0-04014fb1-1641-4424-9fb4-fe0c56429b95 /192.168.56.33  kfk-es-03-0
+logstash        postgresql      2          1184            1184            0               kfk-es-03-0-04014fb1-1641-4424-9fb4-fe0c56429b95 /192.168.56.33  kfk-es-03-0
+logstash        kafka           2          1239            1239            0               kfk-es-03-0-04014fb1-1641-4424-9fb4-fe0c56429b95 /192.168.56.33  kfk-es-03-0
+logstash        elasticsearch   2          2368            2368            0               kfk-es-03-0-04014fb1-1641-4424-9fb4-fe0c56429b95 /192.168.56.33  kfk-es-03-0
+logstash        nginx           2          18              18              0               kfk-es-03-0-04014fb1-1641-4424-9fb4-fe0c56429b95 /192.168.56.33  kfk-es-03-0
+logstash        haproxy         2          100             100             0               kfk-es-03-0-04014fb1-1641-4424-9fb4-fe0c56429b95 /192.168.56.33  kfk-es-03-0
+logstash        redis           2          230             230             0               kfk-es-03-0-04014fb1-1641-4424-9fb4-fe0c56429b95 /192.168.56.33  kfk-es-03-0
+logstash        logstash        0          543             543             0               kfk-es-01-0-af7c5e94-ae6e-4c9c-a3d7-927b3c54575a /192.168.56.31  kfk-es-01-0
+logstash        postgresql      0          1185            1185            0               kfk-es-01-0-af7c5e94-ae6e-4c9c-a3d7-927b3c54575a /192.168.56.31  kfk-es-01-0
+logstash        nginx           0          21              21              0               kfk-es-01-0-af7c5e94-ae6e-4c9c-a3d7-927b3c54575a /192.168.56.31  kfk-es-01-0
+logstash        kafka           0          1215            1215            0               kfk-es-01-0-af7c5e94-ae6e-4c9c-a3d7-927b3c54575a /192.168.56.31  kfk-es-01-0
+logstash        elasticsearch   0          2373            2373            0               kfk-es-01-0-af7c5e94-ae6e-4c9c-a3d7-927b3c54575a /192.168.56.31  kfk-es-01-0
+logstash        redis           0          231             231             0               kfk-es-01-0-af7c5e94-ae6e-4c9c-a3d7-927b3c54575a /192.168.56.31  kfk-es-01-0
+logstash        haproxy         0          103             103             0               kfk-es-01-0-af7c5e94-ae6e-4c9c-a3d7-927b3c54575a /192.168.56.31  kfk-es-01-0
+logstash        system          0          14582           14582           0               kfk-es-01-0-af7c5e94-ae6e-4c9c-a3d7-927b3c54575a /192.168.56.31  kfk-es-01-0
+logstash        kibana          0          279             279             0               kfk-es-01-0-af7c5e94-ae6e-4c9c-a3d7-927b3c54575a /192.168.56.31  kfk-es-01-0
+```
+
+Также удобно смотреть всё это с помощью **GUI**, для этого был написан скрипт [kafka-ui.sh](kafka-ui.sh), который при разворачивании в **vagrant** позволяет поднять и настроить **kafbat UI** (графический интерфейс для **kafka**) в **docker** по адресу [localhost:8080](http://localhost:8080):
+
+![Dashboard](images/dashboard.png)
+![Brokers](images/brokers.png)
+![Topics](images/topics.png)
+![Topics/system](images/topics_system.png)
+![Consumers](images/consumers.png)
+![Consumers/logstash](images/consumers_logstash.png)
+
+Конвейер сбора логов представляет из себя **Filebeat** -> **Kafka** -> **Logstash** -> **ElasticSearch**. Каждое приложение пришет в свой индекс, поэтому если индексы были созданы, то настройка прошла успешно. Зайдём в **Kibana** -> **Stack Management** -> **Data** -> **index Management** (пароль пользователя **elastic** генерится автоматически и доступен в файл [secrets/elasticsearch_elastic_password.txt](secrets/elasticsearch_elastic_password.txt)) и проверим, что все индексы были созданы. Видно, что создалось 8 индексов, все в статусе **green** и у каждого есть одна реплика:
+
+![indexes](images/indexes.png)
 
 Посмотрим содержимое этих индексов через **Kibana** -> **Analytics** -> **Discover**:
 
-![angie](images/angie.png)
-![elasticsearch](images/elasticsearch.png)
-![haproxy](images/haproxy.png)
-![kibana](images/kibana_log.png)
-![logstash](images/logstash.png)
-![postgresql](images/postgresql.png)
-![redis](images/redis.png)
 ![system](images/system.png)
