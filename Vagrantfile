@@ -98,7 +98,7 @@ Vagrant.configure('2') do |config|
           ansible.limit = 'all'
           ansible.compatibility_mode = '2.0'
           ansible.raw_arguments = ['--diff']
-          ansible.tags = ['kafka']
+          #ansible.tags = ['kafka']
         end
       end
 
