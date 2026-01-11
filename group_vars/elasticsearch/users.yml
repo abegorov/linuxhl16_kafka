@@ -6,5 +6,5 @@ system_users_list:
     password: 'x'
     group: '{{ kafka_group }}'
     comment: Apache Kafka open-source distributed event streaming platform
-    home: '{{ kafka_data }}'
+    home: '{{ kafka_home_dir }}'
 ...

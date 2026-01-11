@@ -1,0 +1,27 @@
+---
+- name: Update kafka keystore
+  community.general.java_keystore:
+    name: '{{ kafka_keystore_name }}'
+    certificate: '{{ kafka_keystore_certificate }}'
+    private_key: '{{ kafka_keystore_private_key }}'
+    password: '{{ kafka_keystore_password }}'
+    keystore_type: '{{ kafka_keystore_type }}'
+    dest: '{{ kafka_config_dir }}/keystore.p12'
+    owner: '{{ kafka_user }}'
+    group: '{{ kafka_group }}'
+    mode: '0440'
+  when:
+    - kafka_keystore_certificate | length > 0
+    - kafka_keystore_private_key | length > 0
+  notify: Restart kafka service
+
+- name: Update kafka truststore
+  ansible.builtin.template:
+    src: truststore.pem.j2
+    dest: '{{ kafka_config_dir }}/truststore.pem'
+    owner: root
+    group: root
+    mode: '0644'
+  diff: false
+  notify: Restart kafka service
+...

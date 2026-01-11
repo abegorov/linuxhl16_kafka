@@ -27,5 +27,5 @@
 
 - name: Force all notified handlers to run
   ansible.builtin.meta: flush_handlers
-  tags: [filebeat, filebeat_config]
+  tags: [filebeat, filebeat_certs, filebeat_config]
 ...

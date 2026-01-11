@@ -1,5 +1,55 @@
 ---
 kafka_user: kafka
 kafka_group: kafka
-kafka_data: /var/lib/kafka
+kafka_home_dir: /var/lib/kafka
+kafka_data_dir: '{{ kafka_home_dir }}/{{ kafka_cluster_uuid }}'
+
+kafka_cluster_uuid: d3hmci7YQre-MuRF8qOF8w
+
+kafka_broker_socket: '{{ ip_address }}:9092'
+kafka_controller_socket: '{{ ip_address }}:9093'
+kafka_controller_voter: '{{ kafka_node_id }}@{{ kafka_controller_socket }}'
+
+kafka_keystore_password: '{{ lookup("ansible.builtin.password",
+  "secrets/kafka_keystore_password.txt", length=26) }}'
+kafka_truststore_certificates:
+  - '{{ lookup("ansible.builtin.file", kafka_ca_cert_path) }}'
+  - '{{ lookup("ansible.builtin.file", filebeat_ca_cert_path) }}'
+
+kafka_server_properties: |
+    process.roles=broker,controller
+    node.id={{ kafka_node_id }}
+    controller.quorum.voters={{ groups['elasticsearch'] |
+      map('ansible.builtin.extract', hostvars, 'kafka_controller_voter') |
+      join(',') }}
+    listeners=BROKER://{{ kafka_broker_socket }},CONTROLLER://{{
+      kafka_controller_socket }}
+    inter.broker.listener.name=BROKER
+    advertised.listeners=BROKER://{{ kafka_broker_socket }},CONTROLLER://{{
+      kafka_controller_socket }}
+    controller.listener.names=CONTROLLER
+    listener.security.protocol.map=CONTROLLER:SSL,BROKER:SSL
+    security.protocol=SSL
+    ssl.keystore.type=PKCS12
+    ssl.keystore.location={{ kafka_config_dir }}/keystore.p12
+    ssl.keystore.password={{ kafka_keystore_password }}
+    ssl.truststore.type=PEM
+    ssl.truststore.location={{ kafka_config_dir }}/truststore.pem
+    ssl.client.auth=required
+    num.network.threads=3
+    num.io.threads=8
+    socket.send.buffer.bytes=102400
+    socket.receive.buffer.bytes=102400
+    socket.request.max.bytes=104857600
+    log.dirs={{ kafka_data_dir }}
+    num.partitions=3
+    num.recovery.threads.per.data.dir=1
+    offsets.topic.replication.factor=3
+    share.coordinator.state.topic.replication.factor=3
+    share.coordinator.state.topic.min.isr=2
+    transaction.state.log.replication.factor=3
+    transaction.state.log.min.isr=2
+    log.retention.hours=24
+    log.segment.bytes=1073741824
+    log.retention.check.interval.ms=300000
 ...

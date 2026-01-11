@@ -1,0 +1,58 @@
+---
+- name: Update kafka server properties
+  ansible.builtin.copy:
+    content: '{{ kafka_server_properties }}'
+    dest: '{{ kafka_config_dir }}/{{ kafka_server_properties_file }}'
+    owner: '{{ kafka_user }}'
+    group: '{{ kafka_group }}'
+    mode: '0440'
+  notify: Restart kafka service
+
+- name: Update kafka config files
+  ansible.builtin.copy:
+    content: '{{ item.value }}'
+    dest: '{{ kafka_config_dir }}/{{ item.key }}'
+    owner: '{{ kafka_config_files_properties[item.key].owner |
+      default(kafka_user) }}'
+    group: '{{ kafka_config_files_properties[item.key].group |
+      default(kafka_group) }}'
+    mode: '{{ kafka_config_files_properties[item.key].mode |
+      default("0440") }}'
+  diff: '{{ kafka_config_files_properties[item.key | default("")].diff |
+    default(omit) }}'
+  no_log: '{{ kafka_config_files_properties[item.key | default("")].no_log |
+    default(False) }}'
+  loop: '{{ kafka_config_files | ansible.builtin.dict2items }}'
+  loop_control:
+    label: '{{ item.key }}'
+
+- name: Format data directory
+  become: true
+  become_user: '{{ kafka_user }}'
+  ansible.builtin.command: >
+    {{ kafka_path }}/bin/kafka-storage.sh
+    format
+    {% if kafka_standalone_init %}--standalone{% endif %}
+    --cluster-id {{ kafka_cluster_uuid | ansible.builtin.quote }}
+    --config {{ [kafka_config_dir, kafka_server_properties_file] | join('/') |
+    ansible.builtin.quote }}
+  args:
+    creates: '{{ kafka_data_dir }}/meta.properties'
+
+- name: Update kafka systemd service
+  ansible.builtin.template:
+    src: kafka.service
+    dest: /etc/systemd/system/kafka.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart kafka service
+
+- name: Enable and start kafka service
+  ansible.builtin.systemd_service:
+    name: kafka.service
+    enabled: true
+    daemon_reload: true
+    state: started
+  ignore_errors: '{{ ansible_check_mode }}'
+...

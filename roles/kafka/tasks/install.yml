@@ -1,7 +1,9 @@
 ---
-- name: Install JAVA runtime
+- name: Install JAVA runtime and acl
   ansible.builtin.apt:
-    name: default-jre-headless
+    name:
+      - acl
+      - default-jre-headless
     update_cache: true
     cache_valid_time: 3600
     state: present
@@ -25,4 +27,28 @@
     extra_opts: --strip-components=1
     owner: root
     group: root
+
+- name: Create kafka config directory
+  ansible.builtin.file:
+    path: '{{ kafka_config_dir }}'
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create kafka home directory
+  ansible.builtin.file:
+    path: '{{ kafka_home_dir }}'
+    state: directory
+    owner: '{{ kafka_user }}'
+    group: '{{ kafka_group }}'
+    mode: '0755'
+
+- name: Create kafka log directory
+  ansible.builtin.file:
+    path: '{{ kafka_log_dir }}'
+    state: directory
+    owner: '{{ kafka_user }}'
+    group: '{{ kafka_group }}'
+    mode: '0755'
 ...

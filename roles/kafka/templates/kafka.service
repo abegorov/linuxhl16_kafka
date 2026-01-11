@@ -1,0 +1,21 @@
+[Unit]
+Description=Kafka Broker
+After=network.target network-online.target remote-fs.target
+
+[Service]
+Type=forking
+User={{ kafka_user }}
+Group={{ kafka_group }}
+Environment="KAFKA_CONFIG={{ kafka_config_dir }}/{{
+  kafka_server_properties_file }}"
+Environment="KAFKA_JMX_OPTS=-Dcom.sun.management.jmxremote \
+  -Dcom.sun.management.jmxremote.port=10030 \
+  -Dcom.sun.management.jmxremote.local.only=true \
+  -Dcom.sun.management.jmxremote.authenticate=false"
+Environment="LOG_DIR={{ kafka_log_dir }}"
+ExecStart={{ kafka_path }}/bin/kafka-server-start.sh -daemon ${KAFKA_CONFIG}
+ExecStop={{ kafka_path }}/bin/kafka-server-stop.sh
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target

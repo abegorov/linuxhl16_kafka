@@ -1,0 +1,9 @@
+---
+- name: Restart kafka service
+  ansible.builtin.systemd_service:
+    name: kafka.service
+    daemon_reload: true
+    state: restarted
+  throttle: 1
+  ignore_errors: '{{ ansible_check_mode }}'
+...

@@ -2,4 +2,16 @@
 - name: Install kafka
   ansible.builtin.import_tasks: install.yml
   tags: [kafka, kafka_install]
+
+- name: Import certs tasks
+  ansible.builtin.import_tasks: certs.yml
+  tags: [kafka, kafka_certs]
+
+- name: Import config tasks
+  ansible.builtin.import_tasks: config.yml
+  tags: [kafka, kafka_config]
+
+- name: Force all notified handlers to run
+  ansible.builtin.meta: flush_handlers
+  tags: [kafka, kafka_certs, kafka_config]
 ...
