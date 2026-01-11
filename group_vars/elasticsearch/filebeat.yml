@@ -1,8 +1,8 @@
 ---
-filebeat_logstash_ca: /etc/filebeat/certs/logstash_ca.crt
+filebeat_kafka_ca: /etc/filebeat/certs/kafka_ca.crt
 filebeat_add_certs:
-  - ca_path: '{{ filebeat_logstash_ca }}'
-    ca_content: '{{ lookup("ansible.builtin.file", logstash_ca_cert_path) }}'
+  - ca_path: '{{ filebeat_kafka_ca }}'
+    ca_content: '{{ lookup("ansible.builtin.file", kafka_ca_cert_path) }}'
 
 filebeat_config:
   filebeat.modules:
@@ -11,6 +11,14 @@ filebeat_config:
       syslog.var.use_journald: true
       auth.enabled: true
       auth.var.use_journald: true
+    - module: kafka
+      log.enabled: true
+      log.var.kafka_home: '{{ kafka_path }}'
+      log.var.paths:
+        - /var/log/kafka/controller.log*
+        - /var/log/kafka/server.log*
+        - /var/log/kafka/state-change.log*
+        - /var/log/kafka/kafka-*.log*
     - module: elasticsearch
       server.enabled: true
       gc.enabled: true
@@ -26,12 +34,17 @@ filebeat_config:
       slowlog.enabled: true
   setup.template.settings:
     index.number_of_shards: 2
-  output.logstash:
+  output.kafka:
     hosts: '{{ groups["elasticsearch"] |
-      map("ansible.builtin.extract", hostvars, "logstash_filebeat_host") }}'
-    ssl.certificate_authorities: ['{{ filebeat_logstash_ca }}']
+      map("ansible.builtin.extract", hostvars, "kafka_broker_socket") }}'
+    ssl.certificate_authorities: ['{{ filebeat_kafka_ca }}']
     ssl.certificate: '{{ filebeat_cert.cert_path }}'
     ssl.key: '{{ filebeat_cert.key_path }}'
+    topic: '%{[event.module]}'
+    required_acks: -1
+    compression: zstd
+    max_message_bytes: 1000000
+    version: '2.6.0'
   processors:
     - add_host_metadata:
         when.not.contains.tags: forwarded
